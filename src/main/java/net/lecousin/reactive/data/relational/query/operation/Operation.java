@@ -16,6 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class Operation {
+    private final Object toCallLock = new Object();
     LcReactiveDataRelationalClient lcClient;
     EntityCache cache = new EntityCache();
     EntityLoader loader = new EntityLoader();
@@ -23,27 +24,29 @@ public class Operation {
     SaveProcessor save = new SaveProcessor();
     DeleteProcessor delete = new DeleteProcessor();
     DeleteWithoutLoading deleteWithoutLoading = new DeleteWithoutLoading();
-
     /**
      * List of functions to call in sequence.
      */
     private List<Runnable> toCall = new LinkedList<>();
-
-    private final Object toCallLock = new Object();
 
     public Operation(LcReactiveDataRelationalClient lcClient) {
         this.lcClient = lcClient;
     }
 
     static Mono<Void> executeParallel(List<Mono<Void>> monos) {
-        if (monos.isEmpty()) return null;
-        if (monos.size() == 1) return monos.get(0);
-        if (monos.size() > 4)
+        if (monos.isEmpty()) {
+            return null;
+        }
+        if (monos.size() == 1) {
+            return monos.get(0);
+        }
+        if (monos.size() > 4) {
             return Flux.fromIterable(monos)
                     .parallel()
                     .runOn(Schedulers.parallel(), 4)
                     .flatMap(s -> s)
                     .then();
+        }
         return Flux.merge(monos).then();
     }
 
@@ -82,7 +85,9 @@ public class Operation {
                 .expand(
                         value -> {
                             Mono<Void> step = doNext();
-                            if (step == null) return Mono.empty();
+                            if (step == null) {
+                                return Mono.empty();
+                            }
                             return step.thenReturn(1);
                         })
                 .then();
@@ -92,31 +97,47 @@ public class Operation {
         // call functions
         List<Runnable> calls = toCall;
         toCall = new LinkedList<>();
-        for (Runnable r : calls) r.run();
+        for (Runnable r : calls) {
+            r.run();
+        }
 
         // process what need to be processed
         try {
-            if (save.processRequests(Operation.this)) return Mono.empty();
-            if (delete.processRequests(Operation.this)) return Mono.empty();
+            if (save.processRequests(Operation.this)) {
+                return Mono.empty();
+            }
+            if (delete.processRequests(Operation.this)) {
+                return Mono.empty();
+            }
         } catch (Exception e) {
             return Mono.error(e);
         }
 
         // if some entities need to be loaded, or retrieved, do it
         Mono<Void> op = loader.doOperations(Operation.this);
-        if (op != null) return op;
+        if (op != null) {
+            return op;
+        }
 
         // finally we can do the operations
         op = updater.doOperations(Operation.this);
-        if (op != null) return op;
+        if (op != null) {
+            return op;
+        }
 
         op = save.doOperations(Operation.this);
-        if (op != null) return op;
+        if (op != null) {
+            return op;
+        }
 
         op = delete.doOperations(Operation.this);
         Mono<Void> op2 = deleteWithoutLoading.doOperations(Operation.this);
-        if (op == null) return op2;
-        if (op2 == null) return op;
+        if (op == null) {
+            return op2;
+        }
+        if (op2 == null) {
+            return op;
+        }
         return Mono.when(op, op2);
     }
 }

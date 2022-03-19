@@ -54,7 +54,9 @@ public class SelectExecution<T> {
 
     private static boolean isSourceFor(TableReference t1, TableReference t2) {
         while (t2 != null) {
-            if (t1 == t2) return true;
+            if (t1 == t2) {
+                return true;
+            }
             t2 = t2.source;
         }
         return false;
@@ -76,30 +78,34 @@ public class SelectExecution<T> {
                 client.getMappingContext().getRequiredPersistentEntity(query.from.targetType);
         SelectMapping mapping = buildSelectMapping();
         List<Expression> idColumns;
-        if (entity.hasIdProperty())
+        if (entity.hasIdProperty()) {
             idColumns =
                     Collections.singletonList(
                             Column.create(
                                     entity.getIdColumn(),
                                     mapping.tableByAlias.get(query.from.alias)));
-        else if (entity.isAnnotationPresent(CompositeId.class)) {
+        } else if (entity.isAnnotationPresent(CompositeId.class)) {
             String[] properties = entity.getRequiredAnnotation(CompositeId.class).properties();
             idColumns = new ArrayList<>(properties.length);
-            for (String property : properties)
+            for (String property : properties) {
                 idColumns.add(
                         Column.create(
                                 entity.getRequiredPersistentProperty(property).getColumnName(),
                                 mapping.tableByAlias.get(query.from.alias)));
-        } else
+            }
+        } else {
             throw new IllegalArgumentException(
                     "Cannot count distinct entities without an Id column or a CompoisteId");
+        }
         BuildSelect select =
                 Select.builder()
                         .select(client.getSchemaDialect().countDistinct(idColumns))
                         .from(mapping.tableByAlias.get(query.from.alias));
 
         for (TableReference join : query.joins) {
-            if (!needsTableForPreSelect(join, false)) continue;
+            if (!needsTableForPreSelect(join, false)) {
+                continue;
+            }
             select = join(select, join, mapping);
         }
 
@@ -123,19 +129,29 @@ public class SelectExecution<T> {
     private boolean needsPreSelectIds() {
         // first step is to ensure we wave the target type for all joins
         query.setJoinsTargetType(client.getMapper());
-        if (!hasJoinMany()) return false;
-        if (query.limit > 0) return true;
+        if (!hasJoinMany()) {
+            return false;
+        }
+        if (query.limit > 0) {
+            return true;
+        }
         return hasOrderByOnSubEntityOrOrderByWithConditionOnSubEntity()
                 || hasConditionOnManyEntity();
     }
 
     private boolean hasJoinMany() {
-        for (TableReference join : query.joins) if (isMany(join)) return true;
+        for (TableReference join : query.joins) {
+            if (isMany(join)) {
+                return true;
+            }
+        }
         return false;
     }
 
     private boolean isMany(TableReference table) {
-        if (table.source == null) return false;
+        if (table.source == null) {
+            return false;
+        }
         RelationalPersistentEntity<?> entity =
                 client.getMappingContext().getRequiredPersistentEntity(table.source.targetType);
         try {
@@ -148,36 +164,48 @@ public class SelectExecution<T> {
 
     private boolean isManyFromRoot(TableReference table) {
         while (table.source != null) {
-            if (isMany(table)) return true;
+            if (isMany(table)) {
+                return true;
+            }
             table = table.source;
         }
         return false;
     }
 
     private boolean hasOrderByOnSubEntityOrOrderByWithConditionOnSubEntity() {
-        if (query.orderBy.isEmpty()) return false;
+        if (query.orderBy.isEmpty()) {
+            return false;
+        }
         for (Tuple3<String, String, Boolean> order : query.orderBy) {
             TableReference table = query.tableAliases.get(order.getT1());
-            if (table != query.from) return true;
+            if (table != query.from) {
+                return true;
+            }
         }
         return hasConditionOnSubEntity();
     }
 
     private boolean hasConditionOnSubEntity() {
-        if (query.where == null) return false;
+        if (query.where == null) {
+            return false;
+        }
         return query.where.accept(
                 new CriteriaVisitor.SearchVisitor() {
                     @Override
                     public Boolean visit(PropertyOperation op) {
                         TableReference table =
                                 query.tableAliases.get(op.getLeft().getEntityName());
-                        if (table != query.from) return Boolean.TRUE;
+                        if (table != query.from) {
+                            return Boolean.TRUE;
+                        }
                         if (op.getValue() instanceof PropertyOperand) {
                             table =
                                     query.tableAliases.get(
                                             ((PropertyOperand) op.getValue())
                                                     .getEntityName());
-                            if (table != query.from) return Boolean.TRUE;
+                            if (table != query.from) {
+                                return Boolean.TRUE;
+                            }
                         }
                         return Boolean.FALSE;
                     }
@@ -185,20 +213,26 @@ public class SelectExecution<T> {
     }
 
     private boolean hasConditionOnManyEntity() {
-        if (query.where == null) return false;
+        if (query.where == null) {
+            return false;
+        }
         return query.where.accept(
                 new CriteriaVisitor.SearchVisitor() {
                     @Override
                     public Boolean visit(PropertyOperation op) {
                         TableReference table =
                                 query.tableAliases.get(op.getLeft().getEntityName());
-                        if (isManyFromRoot(table)) return Boolean.TRUE;
+                        if (isManyFromRoot(table)) {
+                            return Boolean.TRUE;
+                        }
                         if (op.getValue() instanceof PropertyOperand) {
                             table =
                                     query.tableAliases.get(
                                             ((PropertyOperand) op.getValue())
                                                     .getEntityName());
-                            if (isManyFromRoot(table)) return Boolean.TRUE;
+                            if (isManyFromRoot(table)) {
+                                return Boolean.TRUE;
+                            }
                         }
                         return Boolean.FALSE;
                     }
@@ -209,23 +243,31 @@ public class SelectExecution<T> {
         if (includeOrderBy) {
             for (Tuple3<String, String, Boolean> order : query.orderBy) {
                 TableReference t = query.tableAliases.get(order.getT1());
-                if (isSourceFor(table, t)) return true;
+                if (isSourceFor(table, t)) {
+                    return true;
+                }
             }
         }
-        if (query.where == null) return false;
+        if (query.where == null) {
+            return false;
+        }
         return query.where.accept(
                 new CriteriaVisitor.SearchVisitor() {
                     @Override
                     public Boolean visit(PropertyOperation op) {
                         TableReference t =
                                 query.tableAliases.get(op.getLeft().getEntityName());
-                        if (isSourceFor(table, t)) return Boolean.TRUE;
+                        if (isSourceFor(table, t)) {
+                            return Boolean.TRUE;
+                        }
                         if (op.getValue() instanceof PropertyOperand) {
                             t =
                                     query.tableAliases.get(
                                             ((PropertyOperand) op.getValue())
                                                     .getEntityName());
-                            if (isSourceFor(table, t)) return Boolean.TRUE;
+                            if (isSourceFor(table, t)) {
+                                return Boolean.TRUE;
+                            }
                         }
                         return Boolean.FALSE;
                     }
@@ -351,7 +393,9 @@ public class SelectExecution<T> {
             boolean orderById) {
 
         List<Column> selectFields = new ArrayList<>(mapping.fields.size());
-        for (SelectField field : mapping.fields) selectFields.add(field.toSql());
+        for (SelectField field : mapping.fields) {
+            selectFields.add(field.toSql());
+        }
         BuildSelect select =
                 Select.builder()
                         .select(selectFields)
@@ -444,8 +488,10 @@ public class SelectExecution<T> {
     private SqlQuery<Select> buildDistinctRootIdSql(SelectMapping mapping) {
         if ((query.limit > 0 && !query.orderBy.isEmpty())
                 || hasOrderByOnSubEntityOrOrderByWithConditionOnSubEntity())
-            // we need a group by query to handle order by correctly
+        // we need a group by query to handle order by correctly
+        {
             return buildDistinctRootIdSqlUsingGroupBy(mapping);
+        }
 
         RelationalPersistentEntity<?> entity =
                 client.getMappingContext().getRequiredPersistentEntity(query.from.targetType);
@@ -461,7 +507,9 @@ public class SelectExecution<T> {
         select = addOrderBy(select);
 
         for (TableReference join : query.joins) {
-            if (!needsTableForPreSelect(join, true)) continue;
+            if (!needsTableForPreSelect(join, true)) {
+                continue;
+            }
             select = join(select, join, mapping);
         }
 
@@ -493,7 +541,9 @@ public class SelectExecution<T> {
                         .from(mapping.tableByAlias.get(query.from.alias));
 
         for (TableReference join : query.joins) {
-            if (!needsTableForPreSelect(join, true)) continue;
+            if (!needsTableForPreSelect(join, true)) {
+                continue;
+            }
             select = join(select, join, mapping);
         }
 
@@ -631,7 +681,9 @@ public class SelectExecution<T> {
 
         @SuppressWarnings("unchecked")
         private void handleRow(Map<String, Object> row, FluxSink<T> sink) {
-            if (logger.isDebugEnabled()) logger.debug("Result row = " + row);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Result row = " + row);
+            }
             PropertiesSource source = new PropertiesSourceMap(row, rootAliases);
             Object rootId = ModelUtils.getId(rootEntity, source);
             if (currentRoot != null) {
@@ -650,7 +702,9 @@ public class SelectExecution<T> {
         }
 
         private void handleEnd(FluxSink<T> sink) {
-            if (logger.isDebugEnabled()) logger.debug("End of rows");
+            if (logger.isDebugEnabled()) {
+                logger.debug("End of rows");
+            }
             if (currentRoot != null) {
                 endOfRoot();
                 sink.next(currentRoot);
@@ -664,7 +718,9 @@ public class SelectExecution<T> {
                 TableReference parentTable,
                 Map<String, Object> row) {
             for (TableReference join : query.joins) {
-                if (join.source != parentTable) continue;
+                if (join.source != parentTable) {
+                    continue;
+                }
                 try {
                     fillLinkedEntity(join, parent, parentState, row);
                 } catch (Exception e) {
@@ -681,7 +737,7 @@ public class SelectExecution<T> {
                 EntityState parentState,
                 Map<String, Object> row)
                 throws ReflectiveOperationException {
-            if (logger.isDebugEnabled())
+            if (logger.isDebugEnabled()) {
                 logger.debug(
                         "Read join "
                                 + join.targetType.getSimpleName()
@@ -689,12 +745,16 @@ public class SelectExecution<T> {
                                 + join.alias
                                 + " from "
                                 + parent.getClass().getSimpleName());
+            }
             Field field = parent.getClass().getDeclaredField(join.propertyName);
             field.setAccessible(true);
             Class<?> type;
             boolean isCollection = ModelUtils.isCollection(field);
-            if (isCollection) type = ModelUtils.getRequiredCollectionType(field);
-            else type = field.getType();
+            if (isCollection) {
+                type = ModelUtils.getRequiredCollectionType(field);
+            } else {
+                type = field.getType();
+            }
             RelationalPersistentEntity<?> entity =
                     client.getMappingContext().getRequiredPersistentEntity(type);
             PropertiesSource source =
@@ -702,19 +762,23 @@ public class SelectExecution<T> {
             Object id = ModelUtils.getId(entity, source);
             if (id == null) {
                 // left join without any match
-                if (isCollection)
+                if (isCollection) {
                     field.set(
                             parent,
                             CollectionFactory.createCollection(
                                     field.getType(), ModelUtils.getCollectionType(field), 0));
+                }
                 return;
             }
             J instance = reader.read((Class<J>) join.targetType, source);
-            if (isCollection) ModelUtils.addToCollectionField(field, parent, instance);
-            else {
-                if (LcEntityTypeInfo.isForeignTableField(field))
+            if (isCollection) {
+                ModelUtils.addToCollectionField(field, parent, instance);
+            } else {
+                if (LcEntityTypeInfo.isForeignTableField(field)) {
                     parentState.setForeignTableField(parent, field, instance, true);
-                else parentState.setPersistedField(parent, field, instance, true);
+                } else {
+                    parentState.setPersistedField(parent, field, instance, true);
+                }
             }
             fillLinkedEntities(instance, EntityState.get(instance, client, entity), join, row);
         }
@@ -725,7 +789,9 @@ public class SelectExecution<T> {
 
         private void signalLoadedForeignTables(Object parent, TableReference parentTable) {
             for (TableReference join : query.joins) {
-                if (join.source != parentTable) continue;
+                if (join.source != parentTable) {
+                    continue;
+                }
                 try {
                     signalLoadedForeignTable(parent, join);
                 } catch (Exception e) {
@@ -746,10 +812,13 @@ public class SelectExecution<T> {
             }
             if (instance != null) {
                 boolean isCollection = ModelUtils.isCollection(field);
-                if (isCollection)
-                    for (Object element : Objects.requireNonNull(ModelUtils.getAsCollection(instance)))
+                if (isCollection) {
+                    for (Object element : Objects.requireNonNull(ModelUtils.getAsCollection(instance))) {
                         signalLoadedForeignTables(element, join);
-                else signalLoadedForeignTables(instance, join);
+                    }
+                } else {
+                    signalLoadedForeignTables(instance, join);
+                }
             }
         }
     }

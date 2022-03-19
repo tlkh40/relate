@@ -15,7 +15,9 @@ public class EntityCache {
     @SuppressWarnings("unchecked")
     public <T> T getById(Class<T> type, Object id) {
         Map<Object, Object> instances = cache.get(type);
-        if (instances == null) return null;
+        if (instances == null) {
+            return null;
+        }
         return (T) instances.get(id);
     }
 
@@ -33,8 +35,9 @@ public class EntityCache {
             RelationalPersistentEntity<T> entity,
             PersistentPropertyAccessor<T> accessor,
             LcReactiveDataRelationalClient client) {
-        if (!state.isPersisted())
+        if (!state.isPersisted()) {
             return accessor.getBean(); // if not persisted, we cannot use id, only instance
+        }
         Map<Object, Object> map = cache.computeIfAbsent(entity.getType(), e -> new HashMap<>());
         Object id = ModelUtils.getId(entity, accessor, client);
         @SuppressWarnings("unchecked")
@@ -43,7 +46,9 @@ public class EntityCache {
             map.put(id, accessor.getBean());
             return accessor.getBean();
         }
-        if (known == accessor.getBean()) return accessor.getBean();
+        if (known == accessor.getBean()) {
+            return accessor.getBean();
+        }
         return known;
     }
 }

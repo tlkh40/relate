@@ -46,7 +46,8 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull Mono<T> findById(@NonNull ID id) {
+    public @NonNull
+    Mono<T> findById(@NonNull ID id) {
         Assert.notNull(id, "Id must not be null in findById");
         RelationalPersistentEntity<?> entity =
                 lcClient.getMappingContext().getRequiredPersistentEntity(entityInfo.getJavaType());
@@ -58,7 +59,8 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull Flux<T> findAllById(@NonNull Publisher<ID> idPublisher) {
+    public @NonNull
+    Flux<T> findAllById(@NonNull Publisher<ID> idPublisher) {
         RelationalPersistentEntity<?> entity =
                 lcClient.getMappingContext().getRequiredPersistentEntity(entityInfo.getJavaType());
         RelationalPersistentProperty idProperty = entity.getRequiredIdProperty();
@@ -67,7 +69,9 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
                 .filter(ids -> !ids.isEmpty())
                 .concatMap(
                         ids -> {
-                            if (ids.isEmpty()) return Flux.empty();
+                            if (ids.isEmpty()) {
+                                return Flux.empty();
+                            }
                             return SelectQuery.from(entityInfo.getJavaType(), "e")
                                     .where(Criteria.property("e", idProperty.getName()).in(ids))
                                     .execute(lcClient);
@@ -75,7 +79,8 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull Mono<Boolean> existsById(@NonNull ID id) {
+    public @NonNull
+    Mono<Boolean> existsById(@NonNull ID id) {
         Assert.notNull(id, "Id must not be null in existsById");
         RelationalPersistentEntity<?> entity =
                 lcClient.getMappingContext().getRequiredPersistentEntity(entityInfo.getJavaType());
@@ -96,45 +101,54 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull <S extends T> Mono<S> save(@NonNull S objectToSave) {
+    public @NonNull
+    <S extends T> Mono<S> save(@NonNull S objectToSave) {
         return lcClient.save(objectToSave);
     }
 
     @Override
-    public @NonNull <S extends T> Flux<S> saveAll(@NonNull Iterable<S> objectsToSave) {
+    public @NonNull
+    <S extends T> Flux<S> saveAll(@NonNull Iterable<S> objectsToSave) {
         return lcClient.save(objectsToSave);
     }
 
     @Override
-    public @NonNull <S extends T> Flux<S> saveAll(@NonNull Publisher<S> objectsToSave) {
+    public @NonNull
+    <S extends T> Flux<S> saveAll(@NonNull Publisher<S> objectsToSave) {
         return lcClient.save(objectsToSave);
     }
 
     @Override
-    public @NonNull Mono<Void> delete(@NonNull T objectToDelete) {
+    public @NonNull
+    Mono<Void> delete(@NonNull T objectToDelete) {
         return lcClient.delete(objectToDelete);
     }
 
     @Override
-    public @NonNull Mono<Void> deleteAll(@NonNull Iterable<? extends T> iterable) {
+    public @NonNull
+    Mono<Void> deleteAll(@NonNull Iterable<? extends T> iterable) {
         return lcClient.delete(iterable);
     }
 
     @Override
-    public @NonNull Mono<Void> deleteAll(@NonNull Publisher<? extends T> objectPublisher) {
+    public @NonNull
+    Mono<Void> deleteAll(@NonNull Publisher<? extends T> objectPublisher) {
         return lcClient.delete(objectPublisher);
     }
 
     @Override
-    public @NonNull Mono<Void> deleteAll() {
+    public @NonNull
+    Mono<Void> deleteAll() {
         if (ModelUtils.hasCascadeDeleteImpacts(
-                entityInfo.getJavaType(), lcClient.getMappingContext()))
+                entityInfo.getJavaType(), lcClient.getMappingContext())) {
             return deleteAll(findAll());
+        }
         return entityOperations.delete(entityInfo.getJavaType()).all().then();
     }
 
     @Override
-    public @NonNull Mono<Void> deleteAllById(@NonNull Iterable<? extends ID> ids) {
+    public @NonNull
+    Mono<Void> deleteAllById(@NonNull Iterable<? extends ID> ids) {
         RelationalPersistentEntity<?> entity =
                 lcClient.getMappingContext().getRequiredPersistentEntity(entityInfo.getJavaType());
         RelationalPersistentProperty idProperty = entity.getRequiredIdProperty();
@@ -157,14 +171,18 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull Mono<Void> deleteById(@NonNull ID id) {
+    public @NonNull
+    Mono<Void> deleteById(@NonNull ID id) {
         Assert.notNull(id, "Id must not be null in deleteById");
         if (ModelUtils.hasCascadeDeleteImpacts(
-                entityInfo.getJavaType(), lcClient.getMappingContext()))
+                entityInfo.getJavaType(), lcClient.getMappingContext())) {
             return findById(id).flatMap(this::delete);
+        }
         RelationalPersistentEntity<?> entity =
                 lcClient.getMappingContext().getRequiredPersistentEntity(entityInfo.getJavaType());
-        if (!entity.hasIdProperty()) return findById(id).flatMap(this::delete);
+        if (!entity.hasIdProperty()) {
+            return findById(id).flatMap(this::delete);
+        }
         RelationalPersistentProperty idProperty = entity.getRequiredIdProperty();
         Table table = Table.create(entity.getTableName());
         Column idColumn = Column.create(idProperty.getColumnName(), table);
@@ -180,13 +198,17 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull Mono<Void> deleteById(@NonNull Publisher<ID> idPublisher) {
+    public @NonNull
+    Mono<Void> deleteById(@NonNull Publisher<ID> idPublisher) {
         if (ModelUtils.hasCascadeDeleteImpacts(
-                entityInfo.getJavaType(), lcClient.getMappingContext()))
+                entityInfo.getJavaType(), lcClient.getMappingContext())) {
             return deleteAll(findAllById(idPublisher));
+        }
         RelationalPersistentEntity<?> entity =
                 lcClient.getMappingContext().getRequiredPersistentEntity(entityInfo.getJavaType());
-        if (!entity.hasIdProperty()) return deleteAll(findAllById(idPublisher));
+        if (!entity.hasIdProperty()) {
+            return deleteAll(findAllById(idPublisher));
+        }
         return Flux.from(idPublisher)
                 .subscribeOn(Schedulers.parallel())
                 .publishOn(Schedulers.parallel())

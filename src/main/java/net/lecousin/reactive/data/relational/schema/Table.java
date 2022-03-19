@@ -35,7 +35,11 @@ public class Table {
     }
 
     public Column getColumn(String name) {
-        for (Column col : columns) if (col.getName().equals(name)) return col;
+        for (Column col : columns) {
+            if (col.getName().equals(name)) {
+                return col;
+            }
+        }
         throw new NoSuchElementException("Column <" + name + "> in table <" + name + ">");
     }
 }

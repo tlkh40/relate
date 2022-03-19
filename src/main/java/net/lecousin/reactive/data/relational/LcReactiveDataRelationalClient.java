@@ -1,5 +1,6 @@
 package net.lecousin.reactive.data.relational;
 
+import lombok.extern.slf4j.Slf4j;
 import net.lecousin.reactive.data.relational.enhance.EntityState;
 import net.lecousin.reactive.data.relational.mapping.LcEntityReader;
 import net.lecousin.reactive.data.relational.mapping.LcMappingR2dbcConverter;
@@ -14,8 +15,6 @@ import net.lecousin.reactive.data.relational.query.operation.Operation;
 import net.lecousin.reactive.data.relational.schema.RelationalDatabaseSchema;
 import net.lecousin.reactive.data.relational.schema.SchemaBuilderFromEntities;
 import net.lecousin.reactive.data.relational.schema.dialect.RelationalDatabaseSchemaDialect;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.reactivestreams.Publisher;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
 import org.springframework.data.mapping.context.MappingContext;
@@ -32,11 +31,9 @@ import reactor.core.scheduler.Schedulers;
 import java.time.Duration;
 import java.util.*;
 
+@Slf4j
 @Component
 public class LcReactiveDataRelationalClient {
-
-    public static final Log logger = LogFactory.getLog(LcReactiveDataRelationalClient.class);
-
     private static final String QUERY_ENTITY_NAME = "entity";
 
     private final DatabaseClient client;
@@ -59,8 +56,9 @@ public class LcReactiveDataRelationalClient {
         this.mapper = mapper;
         this.mapper.setLcClient(this);
         // ensure all declared entities have been detected by Spring
-        for (Class<?> type : LcEntityTypeInfo.getClasses())
+        for (Class<?> type : LcEntityTypeInfo.getClasses()) {
             mappingContext.getPersistentEntity(type);
+        }
     }
 
     /**
@@ -166,7 +164,9 @@ public class LcReactiveDataRelationalClient {
     public <T> Flux<T> save(Iterable<T> entities) {
         try {
             Iterator<T> it = entities.iterator();
-            if (!it.hasNext()) return Flux.empty();
+            if (!it.hasNext()) {
+                return Flux.empty();
+            }
             T instance = it.next();
             @SuppressWarnings("unchecked")
             RelationalPersistentEntity<T> entityType =
@@ -174,7 +174,9 @@ public class LcReactiveDataRelationalClient {
                             mappingContext.getRequiredPersistentEntity(instance.getClass());
             Operation op = new Operation(this);
             op.addToSave(instance, entityType, null, null);
-            while (it.hasNext()) op.addToSave(it.next(), entityType, null, null);
+            while (it.hasNext()) {
+                op.addToSave(it.next(), entityType, null, null);
+            }
             return op.execute().thenMany(Flux.fromIterable(entities));
         } catch (Exception e) {
             return Flux.error(e);
@@ -204,7 +206,9 @@ public class LcReactiveDataRelationalClient {
      */
     public Mono<Void> saveAll(Iterable<Object> entities) {
         Iterator<Object> it = entities.iterator();
-        if (!it.hasNext()) return Mono.empty();
+        if (!it.hasNext()) {
+            return Mono.empty();
+        }
         Operation op = new Operation(this);
         do {
             op.addToSave(it.next(), null, null, null);
@@ -264,8 +268,11 @@ public class LcReactiveDataRelationalClient {
         for (T entity : entities) {
             EntityState state = EntityState.get(entity, this, entityType);
             Mono<T> loading = state.getLoading();
-            if (loading != null) alreadyLoading.add(loading);
-            else toLoad.add(entity);
+            if (loading != null) {
+                alreadyLoading.add(loading);
+            } else {
+                toLoad.add(entity);
+            }
         }
         Flux<T> loading = doLoading(toLoad, entityType).cache();
         for (T entity : toLoad) {
@@ -278,9 +285,13 @@ public class LcReactiveDataRelationalClient {
     @SuppressWarnings("unchecked")
     private <T> Flux<T> doLoading(Iterable<T> entities, RelationalPersistentEntity<?> entityType) {
         Iterator<T> it = entities.iterator();
-        if (!it.hasNext()) return Flux.empty();
+        if (!it.hasNext()) {
+            return Flux.empty();
+        }
         T entity = it.next();
-        if (!it.hasNext()) return Flux.from(doLoading(entity, entityType));
+        if (!it.hasNext()) {
+            return Flux.from(doLoading(entity, entityType));
+        }
         EntityCache cache = new EntityCache();
         Criteria criteria = null;
         do {
@@ -290,7 +301,9 @@ public class LcReactiveDataRelationalClient {
             Criteria entityCriteria =
                     ModelUtils.getCriteriaOnId(QUERY_ENTITY_NAME, entityType, accessor, this);
             criteria = criteria != null ? criteria.or(entityCriteria) : entityCriteria;
-            if (!it.hasNext()) break;
+            if (!it.hasNext()) {
+                break;
+            }
             entity = it.next();
         } while (true);
         return SelectQuery.from((Class<T>) entity.getClass(), QUERY_ENTITY_NAME)
@@ -335,7 +348,9 @@ public class LcReactiveDataRelationalClient {
     public <T> Mono<Void> delete(Iterable<T> entities) {
         try {
             Iterator<T> it = entities.iterator();
-            if (!it.hasNext()) return Mono.empty();
+            if (!it.hasNext()) {
+                return Mono.empty();
+            }
             T instance = it.next();
             @SuppressWarnings("unchecked")
             RelationalPersistentEntity<T> entityType =
@@ -343,7 +358,9 @@ public class LcReactiveDataRelationalClient {
                             mappingContext.getRequiredPersistentEntity(instance.getClass());
             Operation op = new Operation(this);
             op.addToDelete(instance, entityType, null, null);
-            while (it.hasNext()) op.addToDelete(it.next(), entityType, null, null);
+            while (it.hasNext()) {
+                op.addToDelete(it.next(), entityType, null, null);
+            }
             return op.execute();
         } catch (Exception e) {
             return Mono.error(e);

@@ -52,7 +52,7 @@ public class SchemaBuilderFromEntities {
         RelationalPersistentEntity<?> entityType =
                 client.getMappingContext().getRequiredPersistentEntity(entity);
         Table table = new Table(getTableName(entityType));
-        for (RelationalPersistentProperty property : entityType)
+        for (RelationalPersistentProperty property : entityType) {
             try {
                 table.add(buildColumn(property));
             } catch (Exception e) {
@@ -63,6 +63,7 @@ public class SchemaBuilderFromEntities {
                                 + property.getName(),
                         e);
             }
+        }
         CompositeId compositeId = entityType.findAnnotation(CompositeId.class);
         if (compositeId != null) {
             Index index = new Index(compositeId.indexName());
@@ -80,11 +81,15 @@ public class SchemaBuilderFromEntities {
         net.lecousin.reactive.data.relational.annotations.Index indexAnnotation =
                 entityType.findAnnotation(
                         net.lecousin.reactive.data.relational.annotations.Index.class);
-        if (indexAnnotation != null) indexes.add(indexAnnotation);
+        if (indexAnnotation != null) {
+            indexes.add(indexAnnotation);
+        }
         net.lecousin.reactive.data.relational.annotations.Indexes indexesAnnotation =
                 entityType.findAnnotation(
                         net.lecousin.reactive.data.relational.annotations.Indexes.class);
-        if (indexesAnnotation != null) Collections.addAll(indexes, indexesAnnotation.value());
+        if (indexesAnnotation != null) {
+            Collections.addAll(indexes, indexesAnnotation.value());
+        }
         for (net.lecousin.reactive.data.relational.annotations.Index i : indexes) {
             Index index = new Index(i.name());
             index.setUnique(i.unique());
@@ -103,14 +108,17 @@ public class SchemaBuilderFromEntities {
                 new Column(
                         property.getColumnName()
                                 .toSql(client.getDialect().getIdentifierProcessing()));
-        if (property.isAnnotationPresent(Id.class)) col.setPrimaryKey(true);
+        if (property.isAnnotationPresent(Id.class)) {
+            col.setPrimaryKey(true);
+        }
         col.setNullable(ModelUtils.isNullable(property));
         GeneratedValue generated = property.findAnnotation(GeneratedValue.class);
         if (generated != null) {
-            if (GeneratedValue.Strategy.AUTO_INCREMENT.equals(generated.strategy()))
+            if (GeneratedValue.Strategy.AUTO_INCREMENT.equals(generated.strategy())) {
                 col.setAutoIncrement(true);
-            else if (GeneratedValue.Strategy.RANDOM_UUID.equals(generated.strategy()))
+            } else if (GeneratedValue.Strategy.RANDOM_UUID.equals(generated.strategy())) {
                 col.setRandomUuid(true);
+            }
         }
         Class<?> type = property.getType();
         if (property.isAnnotationPresent(ForeignKey.class)) {
@@ -129,7 +137,9 @@ public class SchemaBuilderFromEntities {
                 client.getMappingContext().getRequiredPersistentEntity(entity);
         Iterator<RelationalPersistentProperty> keys =
                 entityType.getPersistentProperties(ForeignKey.class).iterator();
-        if (!keys.hasNext()) return;
+        if (!keys.hasNext()) {
+            return;
+        }
         Table table = schema.getTable(getTableName(entityType));
         do {
             RelationalPersistentProperty fkProperty = keys.next();

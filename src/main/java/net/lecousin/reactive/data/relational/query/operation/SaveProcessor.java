@@ -62,16 +62,20 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
         Object value = foreignFieldValue.getValue();
         Object originalValue = request.state.getPersistedValue(foreignTableField.getName());
         if (value == null) {
-            if (originalValue == null) return; // was already empty
+            if (originalValue == null) {
+                return; // was already empty
+            }
             value = new ArrayList<>(0);
         }
         List<Object> deletedElements = new LinkedList<>();
-        if (originalValue != null)
+        if (originalValue != null) {
             deletedElements.addAll(ModelUtils.getAsCollection(originalValue));
+        }
         deletedElements.removeAll(ModelUtils.getAsCollection(value));
 
-        if (!deletedElements.isEmpty())
+        if (!deletedElements.isEmpty()) {
             deletedElements(op, deletedElements, foreignEntity, fkProperty, fkAnnotation);
+        }
 
         for (Object element : ModelUtils.getAsCollection(value)) {
             SaveRequest save = op.addToSave((T) element, foreignEntity, null, null);
@@ -89,8 +93,9 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
         if (!fkAnnotation.optional()
                 || fkAnnotation.onForeignDeleted().equals(ForeignKey.OnForeignDeleted.DELETE)) {
             // delete
-            for (Object element : deletedElements)
+            for (Object element : deletedElements) {
                 op.addToDelete((T) element, foreignEntity, null, null);
+            }
         } else {
             // update to null
             for (Object element : deletedElements) {
@@ -136,7 +141,9 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
             RelationalPersistentEntity<?> entityType,
             List<SaveRequest> requests,
             List<Mono<Void>> statements) {
-        if (requests.isEmpty()) return;
+        if (requests.isEmpty()) {
+            return;
+        }
         List<SaveRequest> remaining = requests;
         do {
             if (remaining.size() == 1) {
@@ -237,11 +244,15 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
                                 List<Expression> values = new ArrayList<>(columns.size());
                                 for (Column col : columns) {
                                     Expression value = generatedValues.get(col.getReferenceName());
-                                    if (value != null) values.add(value);
-                                    else {
+                                    if (value != null) {
+                                        values.add(value);
+                                    } else {
                                         Parameter val = row.get(col.getReferenceName());
-                                        if (val.getValue() == null) values.add(SQL.nullLiteral());
-                                        else values.add(query.marker(val.getValue()));
+                                        if (val.getValue() == null) {
+                                            values.add(SQL.nullLiteral());
+                                        } else {
+                                            values.add(query.marker(val.getValue()));
+                                        }
                                     }
                                 }
                                 rows.add(values);
@@ -257,7 +268,7 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
                                                 SaveRequest request = queue.removeFirst();
                                                 int index = 0;
                                                 for (RelationalPersistentProperty property :
-                                                        generated)
+                                                        generated) {
                                                     request.accessor.setProperty(
                                                             property,
                                                             op.lcClient
@@ -265,6 +276,7 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
                                                                     .convertFromDataBase(
                                                                             r.get(index++),
                                                                             property.getType()));
+                                                }
                                                 request.state.loaded(request.instance);
                                                 return request.instance;
                                             })
@@ -329,7 +341,7 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
                                             (r, meta) -> {
                                                 int index = 0;
                                                 for (RelationalPersistentProperty property :
-                                                        generated)
+                                                        generated) {
                                                     request.accessor.setProperty(
                                                             property,
                                                             op.lcClient
@@ -337,6 +349,7 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
                                                                     .convertFromDataBase(
                                                                             r.get(index++),
                                                                             property.getType()));
+                                                }
                                                 request.state.loaded(request.instance);
                                                 return request.instance;
                                             });
@@ -367,8 +380,11 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
         }
         for (Map.Entry<SqlIdentifier, Parameter> entry : row.entrySet()) {
             columns.add(Column.create(entry.getKey(), table));
-            if (entry.getValue().getValue() == null) values.add(SQL.nullLiteral());
-            else values.add(query.marker(entry.getValue().getValue()));
+            if (entry.getValue().getValue() == null) {
+                values.add(SQL.nullLiteral());
+            } else {
+                values.add(query.marker(entry.getValue().getValue()));
+            }
         }
         return Insert.builder().into(table).columns(columns).values(values).build();
     }
@@ -390,15 +406,18 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
         OutboundRow row = new OutboundRow();
         LcEntityWriter writer = new LcEntityWriter(op.lcClient.getMapper());
         List<AssignValue> assignments = new LinkedList<>();
-        if (!prepareUpdate(request, table, assignments, row, writer, query)) return null;
+        if (!prepareUpdate(request, table, assignments, row, writer, query)) {
+            return null;
+        }
 
-        for (Map.Entry<SqlIdentifier, Parameter> entry : row.entrySet())
+        for (Map.Entry<SqlIdentifier, Parameter> entry : row.entrySet()) {
             assignments.add(
                     AssignValue.create(
                             Column.create(entry.getKey(), table),
                             entry.getValue().getValue() != null
                                     ? query.marker(entry.getValue().getValue())
                                     : SQL.nullLiteral()));
+        }
 
         Condition criteria =
                 ModelUtils.getConditionOnId(
@@ -418,16 +437,18 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
 
         query.setQuery(Update.builder().table(table).set(assignments).where(criteria).build());
         Mono<Integer> rowsUpdated = query.execute().fetch().rowsUpdated();
-        if (request.entityType.hasVersionProperty())
+        if (request.entityType.hasVersionProperty()) {
             rowsUpdated =
                     rowsUpdated.flatMap(
                             updatedRows -> {
-                                if (updatedRows == 0)
+                                if (updatedRows == 0) {
                                     return Mono.error(
                                             new OptimisticLockingFailureException(
                                                     "Version does not match"));
+                                }
                                 return Mono.just(updatedRows);
                             });
+        }
         return rowsUpdated;
     }
 
@@ -495,25 +516,33 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
 
     @SuppressWarnings("unchecked")
     private static <T> T getDateValue(long timestamp, Class<T> type) {
-        if (type.equals(long.class) || type.equals(Long.class)) return (T) Long.valueOf(timestamp);
-        if (type.isAssignableFrom(java.time.Instant.class))
+        if (type.equals(long.class) || type.equals(Long.class)) {
+            return (T) Long.valueOf(timestamp);
+        }
+        if (type.isAssignableFrom(java.time.Instant.class)) {
             return (T) java.time.Instant.ofEpochMilli(timestamp);
-        if (type.isAssignableFrom(java.time.LocalDate.class))
+        }
+        if (type.isAssignableFrom(java.time.LocalDate.class)) {
             return (T) java.time.Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate();
-        if (type.isAssignableFrom(java.time.LocalTime.class))
+        }
+        if (type.isAssignableFrom(java.time.LocalTime.class)) {
             return (T) java.time.Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalTime();
-        if (type.isAssignableFrom(java.time.OffsetTime.class))
+        }
+        if (type.isAssignableFrom(java.time.OffsetTime.class)) {
             return (T)
                     java.time.OffsetTime.ofInstant(
                             java.time.Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
-        if (type.isAssignableFrom(java.time.LocalDateTime.class))
+        }
+        if (type.isAssignableFrom(java.time.LocalDateTime.class)) {
             return (T)
                     java.time.LocalDateTime.ofInstant(
                             java.time.Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
-        if (type.isAssignableFrom(java.time.ZonedDateTime.class))
+        }
+        if (type.isAssignableFrom(java.time.ZonedDateTime.class)) {
             return (T)
                     java.time.ZonedDateTime.ofInstant(
                             java.time.Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
+        }
         return null;
     }
 
@@ -543,8 +572,9 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
         if (!Objects.equals(originalValue, value) && originalValue != null) {
             // link changed, we need to delete/null the previous one
             // remove the link
-            if (foreignTableInfo != null)
+            if (foreignTableInfo != null) {
                 removeForeignTableLink(op, request, foreignTableInfo, originalValue);
+            }
             if ((foreignTableInfo != null && !foreignTableInfo.getAnnotation().optional())
                     || fkAnnotation.cascadeDelete()) {
                 // not optional specified on ForeignTable, or cascadeDelete -> this is a delete
@@ -553,8 +583,9 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
         }
         if (value != null) {
             SaveRequest save = op.addToSave(value, null, null, null);
-            if (!save.state.isPersisted())
+            if (!save.state.isPersisted()) {
                 request.dependsOn(save); // if the foreign id is not yet available, we depend on it
+            }
         }
     }
 
@@ -567,8 +598,10 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
             RelationalPersistentEntity<T> foreignEntity,
             RelationalPersistentProperty fkProperty,
             ForeignKey fkAnnotation) {
-        if (foreignFieldValue == null) return; // not loaded -> not saved
-        if (foreignTableInfo.isCollection())
+        if (foreignFieldValue == null) {
+            return; // not loaded -> not saved
+        }
+        if (foreignTableInfo.isCollection()) {
             processForeignTableFieldCollection(
                     op,
                     request,
@@ -577,7 +610,7 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
                     foreignEntity,
                     fkProperty,
                     fkAnnotation);
-        else
+        } else {
             processForeignTableFieldSimple(
                     op,
                     request,
@@ -586,6 +619,7 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
                     foreignEntity,
                     fkProperty,
                     fkAnnotation);
+        }
     }
 
     @Override
@@ -597,9 +631,14 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
         List<SaveRequest> toInsert = new LinkedList<>();
         for (SaveRequest request : requests) {
             if (!request.state.isPersisted()) {
-                if (!multipleInsertSupported) statements.add(doInsertSingle(op, request));
-                else toInsert.add(request);
-            } else statements.add(doUpdate(op, request));
+                if (!multipleInsertSupported) {
+                    statements.add(doInsertSingle(op, request));
+                } else {
+                    toInsert.add(request);
+                }
+            } else {
+                statements.add(doUpdate(op, request));
+            }
         }
         doInsert(op, entityType, toInsert, statements);
         return Operation.executeParallel(statements);
@@ -613,7 +652,9 @@ class SaveProcessor extends AbstractInstanceProcessor<SaveProcessor.SaveRequest>
                 EntityState state,
                 PersistentPropertyAccessor<T> accessor) {
             super(entityType, instance, state, accessor);
-            if (!this.state.isLoaded() && this.state.isPersisted()) this.toProcess = false;
+            if (!this.state.isLoaded() && this.state.isPersisted()) {
+                this.toProcess = false;
+            }
         }
     }
 }

@@ -19,7 +19,8 @@ public class LcReactiveDataAccessStrategy extends DefaultReactiveDataAccessStrat
     }
 
     @Override
-    public @NonNull <T> BiFunction<Row, RowMetadata, T> getRowMapper(@NonNull Class<T> typeToRead) {
+    public @NonNull
+    <T> BiFunction<Row, RowMetadata, T> getRowMapper(@NonNull Class<T> typeToRead) {
         LcEntityReader reader = new LcEntityReader(null, (LcMappingR2dbcConverter) getConverter());
         return (row, metadata) -> reader.read(typeToRead, new PropertiesSourceRow(row, metadata));
     }

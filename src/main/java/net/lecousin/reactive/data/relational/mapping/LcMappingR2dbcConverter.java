@@ -37,7 +37,8 @@ public class LcMappingR2dbcConverter extends MappingR2dbcConverter implements R2
     }
 
     @Override
-    public @NonNull <R> R read(@NonNull Class<R> type, @NonNull Row row, @Nullable RowMetadata metadata) {
+    public @NonNull
+    <R> R read(@NonNull Class<R> type, @NonNull Row row, @Nullable RowMetadata metadata) {
         return new LcEntityReader(null, null, client)
                 .read(type, new PropertiesSourceRow(row, metadata));
     }

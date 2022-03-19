@@ -53,14 +53,18 @@ public final class Enhancer {
     private static int getJavaVersion() {
         String s = System.getProperty("java.version");
         int i = s.indexOf('.');
-        if (i > 0) s = s.substring(0, i);
+        if (i > 0) {
+            s = s.substring(0, i);
+        }
         return Integer.parseInt(s);
     }
 
     private static boolean isPersistent(CtField field) {
         if (field.hasAnnotation(Transient.class)
                 || field.hasAnnotation(Autowired.class)
-                || field.hasAnnotation(Value.class)) return false;
+                || field.hasAnnotation(Value.class)) {
+            return false;
+        }
         return field.hasAnnotation(Id.class)
                 || field.hasAnnotation(Column.class)
                 || field.hasAnnotation(ColumnDefinition.class)
@@ -79,7 +83,9 @@ public final class Enhancer {
 
     private static void enhancePersistentFields(CtClass cl) throws CannotCompileException {
         for (CtField field : cl.getDeclaredFields()) {
-            if (!isPersistent(field)) continue;
+            if (!isPersistent(field)) {
+                continue;
+            }
 
             String accessorSuffix =
                     Character.toUpperCase(field.getName().charAt(0)) + field.getName().substring(1);
@@ -237,11 +243,12 @@ public final class Enhancer {
                 Class<?> neighbor =
                         neighborByPackage.computeIfAbsent(
                                 cl.getPackageName(), this::searchNeighbor);
-                if (neighbor == null && getJavaVersion() >= 17)
+                if (neighbor == null && getJavaVersion() >= 17) {
                     logger.error(
                             "Starting from Java 17, you must have a non entity class (without @Table annotation) on your entities packages, but we cannot find one in '"
                                     + cl.getPackageName()
                                     + "': you should add an empty interface 'AllowEnhancer' in the package.");
+                }
                 Class<?> newClass = neighbor != null ? cl.toClass(neighbor) : cl.toClass();
                 result.add(newClass);
             } catch (Exception e) {
@@ -277,9 +284,10 @@ public final class Enhancer {
         for (String className : entityClasses) {
             try {
                 CtClass cl = classPool.get(className);
-                if (!cl.hasAnnotation(Table.class))
+                if (!cl.hasAnnotation(Table.class)) {
                     throw new ModelException(
                             "Class is not an entity (no @Table annotation): " + className);
+                }
                 if (hasField(cl, STATE_FIELD_NAME)) {
                     logger.warn("Entity already enhanced: " + className);
                     return;
@@ -295,13 +303,14 @@ public final class Enhancer {
     }
 
     private void addStateAttribute() throws ModelException {
-        for (CtClass cl : classes.values())
+        for (CtClass cl : classes.values()) {
             try {
                 addStateAttribute(cl);
             } catch (Exception e) {
                 throw new ModelException(
                         "Unable to add state attribute to class " + cl.getName(), e);
             }
+        }
     }
 
     private void addStateAttribute(CtClass cl) throws CannotCompileException, NotFoundException {
@@ -321,12 +330,13 @@ public final class Enhancer {
     }
 
     private void enhancePersistentFields() throws ModelException {
-        for (CtClass cl : classes.values())
+        for (CtClass cl : classes.values()) {
             try {
                 enhancePersistentFields(cl);
             } catch (Exception e) {
                 throw new ModelException("Error enhancing entity class " + cl.getName(), e);
             }
+        }
     }
 
     @SuppressWarnings("java:S3776")
@@ -341,20 +351,23 @@ public final class Enhancer {
         // collect
         for (CtClass cl : classes.values()) {
             for (CtField field : cl.getDeclaredFields()) {
-                if (!field.hasAnnotation(JoinTable.class)) continue;
+                if (!field.hasAnnotation(JoinTable.class)) {
+                    continue;
+                }
                 try {
                     JoinTable jt = (JoinTable) field.getAnnotation(JoinTable.class);
                     CtClass type = field.getType();
-                    if (!type.subtypeOf(clSet))
+                    if (!type.subtypeOf(clSet)) {
                         throw new ModelException(
                                 "Attribute "
                                         + cl.getName()
                                         + "#"
                                         + field.getName()
                                         + " annotated with @JoinTable must be a Set");
+                    }
                     ObjectType ot =
                             SignatureAttribute.toFieldSignature(field.getGenericSignature());
-                    if (!(ot instanceof SignatureAttribute.ClassType))
+                    if (!(ot instanceof SignatureAttribute.ClassType)) {
                         throw new ModelException(
                                 "Unexpected type "
                                         + ot
@@ -362,15 +375,17 @@ public final class Enhancer {
                                         + cl.getName()
                                         + '#'
                                         + field.getName());
+                    }
                     SignatureAttribute.ClassType ct = (SignatureAttribute.ClassType) ot;
-                    if (ct.getTypeArguments().length != 1)
+                    if (ct.getTypeArguments().length != 1) {
                         throw new ModelException(
                                 "Unexpected type for @JoinTable field, must be a Set with 1 type argument: "
                                         + cl.getName()
                                         + '#'
                                         + field.getName());
+                    }
                     ot = ct.getTypeArguments()[0].getType();
-                    if (!(ot instanceof SignatureAttribute.ClassType))
+                    if (!(ot instanceof SignatureAttribute.ClassType)) {
                         throw new ModelException(
                                 "Unexpected collection element type "
                                         + ot
@@ -378,9 +393,10 @@ public final class Enhancer {
                                         + cl.getName()
                                         + '#'
                                         + field.getName());
+                    }
                     ct = (SignatureAttribute.ClassType) ot;
                     CtClass target = classes.get(ct.getName());
-                    if (target == null)
+                    if (target == null) {
                         throw new ModelException(
                                 "Unexpected collection element type "
                                         + ot
@@ -388,6 +404,7 @@ public final class Enhancer {
                                         + cl.getName()
                                         + '#'
                                         + field.getName());
+                    }
                     joins.add(Tuples.of(cl, field, jt, target));
                 } catch (ModelException e) {
                     throw e;
@@ -428,22 +445,31 @@ public final class Enhancer {
             NotFoundException {
         List<Tuple4<CtClass, CtField, JoinTable, CtClass>> targetJoins = new LinkedList<>();
         for (Tuple4<CtClass, CtField, JoinTable, CtClass> tt : joins) {
-            if (!tt.getT1().equals(t.getT4())) continue;
-            if (!tt.getT3().tableName().equals(t.getT3().tableName())) continue;
+            if (!tt.getT1().equals(t.getT4())) {
+                continue;
+            }
+            if (!tt.getT3().tableName().equals(t.getT3().tableName())) {
+                continue;
+            }
             if (tt.getT3().joinProperty().length() > 0
-                    && !tt.getT3().joinProperty().equals(t.getT2().getName())) continue;
+                    && !tt.getT3().joinProperty().equals(t.getT2().getName())) {
+                continue;
+            }
             if (t.getT3().joinProperty().length() > 0
-                    && !t.getT3().joinProperty().equals(tt.getT2().getName())) continue;
+                    && !t.getT3().joinProperty().equals(tt.getT2().getName())) {
+                continue;
+            }
             targetJoins.add(tt);
         }
 
-        if (targetJoins.size() > 1)
+        if (targetJoins.size() > 1) {
             throw new ModelException(
                     "@JoinTable on field "
                             + t.getT1().getName()
                             + '#'
                             + t.getT2().getName()
                             + " is ambiguous");
+        }
 
         CtClass class1;
         CtClass class2;
@@ -466,7 +492,7 @@ public final class Enhancer {
         String tableName;
 
         if (targetJoins.isEmpty()) {
-            if (t.getT3().joinProperty().length() > 0)
+            if (t.getT3().joinProperty().length() > 0) {
                 throw new ModelException(
                         "@JoinTable on field "
                                 + t.getT1().getName()
@@ -476,6 +502,7 @@ public final class Enhancer {
                                 + t.getT3().joinProperty()
                                 + ") that does not exist on "
                                 + t.getT4().getName());
+            }
             tableName = t.getT3().tableName();
         } else {
             Tuple4<CtClass, CtField, JoinTable, CtClass> tt = targetJoins.get(0);
@@ -495,20 +522,26 @@ public final class Enhancer {
             Table t2 = (Table) class2.getAnnotation(Table.class);
             String name1 = t1.value();
             String name2 = t2.value();
-            if (name1.isEmpty()) name1 = class1.getSimpleName();
-            if (name2.isEmpty()) name2 = class2.getSimpleName();
+            if (name1.isEmpty()) {
+                name1 = class1.getSimpleName();
+            }
+            if (name2.isEmpty()) {
+                name2 = class2.getSimpleName();
+            }
             tableName = name1 + '_' + name2 + "_JOIN";
         }
 
         String joinClassName = class1.getPackageName();
-        if (joinClassName != null)
+        if (joinClassName != null) {
             joinClassName =
                     joinClassName
                             + ".JoinEntity_"
                             + class1.getSimpleName()
                             + '_'
                             + class2.getSimpleName();
-        else joinClassName = "JoinEntity_" + class1.getSimpleName() + '_' + class2.getSimpleName();
+        } else {
+            joinClassName = "JoinEntity_" + class1.getSimpleName() + '_' + class2.getSimpleName();
+        }
 
         logger.info("Create join table class " + joinClassName + " with table name " + tableName);
 
@@ -529,8 +562,12 @@ public final class Enhancer {
         createJoinTableField(
                 joinClass, JOIN_TABLE_ATTRIBUTE_PREFIX + "2", class2, columnName2, constPool);
 
-        if (field1 != null) createJoinField(class1, field1, joinClassName, 1);
-        if (field2 != null) createJoinField(class2, field2, joinClassName, 2);
+        if (field1 != null) {
+            createJoinField(class1, field1, joinClassName, 1);
+        }
+        if (field2 != null) {
+            createJoinField(class2, field2, joinClassName, 2);
+        }
 
         classes.put(joinClassName, joinClass);
     }
@@ -549,7 +586,7 @@ public final class Enhancer {
         field.setGenericSignature(
                 new SignatureAttribute.ClassType(
                         Collection.class.getName(),
-                        new TypeArgument[]{
+                        new TypeArgument[] {
                                 new TypeArgument(
                                         new SignatureAttribute.ClassType(joinClassName))
                         })
@@ -571,12 +608,13 @@ public final class Enhancer {
     }
 
     private void enhanceLazyMethods() throws ModelException {
-        for (CtClass cl : classes.values())
+        for (CtClass cl : classes.values()) {
             try {
                 enhanceLazyMethods(cl);
             } catch (Exception e) {
                 throw new ModelException("Error enhancing entity class " + cl.getName(), e);
             }
+        }
     }
 
     private void enhanceLazyMethods(CtClass cl)

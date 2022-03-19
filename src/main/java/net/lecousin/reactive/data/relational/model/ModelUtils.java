@@ -45,12 +45,20 @@ public class ModelUtils {
      * @return
      */
     public static boolean isNullable(RelationalPersistentProperty property) {
-        if (property.getRawType().isPrimitive()) return false;
-        if (property.isIdProperty()) return false;
+        if (property.getRawType().isPrimitive()) {
+            return false;
+        }
+        if (property.isIdProperty()) {
+            return false;
+        }
         ForeignKey fk = property.findAnnotation(ForeignKey.class);
-        if (fk != null) return fk.optional();
+        if (fk != null) {
+            return fk.optional();
+        }
         ColumnDefinition def = property.findAnnotation(ColumnDefinition.class);
-        if (def != null) return def.nullable();
+        if (def != null) {
+            return def.nullable();
+        }
         return true;
     }
 
@@ -61,10 +69,16 @@ public class ModelUtils {
      * @return
      */
     public static boolean isUpdatable(RelationalPersistentProperty property) {
-        if (!property.isWritable()) return false;
-        if (property.isIdProperty()) return false;
+        if (!property.isWritable()) {
+            return false;
+        }
+        if (property.isIdProperty()) {
+            return false;
+        }
         ColumnDefinition def = property.findAnnotation(ColumnDefinition.class);
-        if (def != null) return def.updatable();
+        if (def != null) {
+            return def.updatable();
+        }
         return true;
     }
 
@@ -82,7 +96,7 @@ public class ModelUtils {
                 LcEntityTypeInfo.get(instance.getClass())
                         .getForeignTableWithFieldForJoinKey(
                                 linkedProperty.getName(), linkedInstance.getClass());
-        if (ft != null && !ft.isCollection())
+        if (ft != null && !ft.isCollection()) {
             try {
                 ft.getField().set(instance, linkedInstance);
             } catch (Exception e) {
@@ -95,6 +109,7 @@ public class ModelUtils {
                                 + linkedInstance,
                         e);
             }
+        }
     }
 
     /**
@@ -110,7 +125,9 @@ public class ModelUtils {
     }
 
     private static void getAllFields(Class<?> cl, List<Field> fields) {
-        if (cl == null) return;
+        if (cl == null) {
+            return;
+        }
         Collections.addAll(fields, cl.getDeclaredFields());
         getAllFields(cl.getSuperclass(), fields);
     }
@@ -130,9 +147,10 @@ public class ModelUtils {
         Object id =
                 (accessor != null ? accessor : entityType.getPropertyAccessor(instance))
                         .getProperty(idProperty);
-        if (id == null)
+        if (id == null) {
             throw new InvalidEntityStateException(
                     "Entity is supposed to be persisted to database, but it's Id property is null");
+        }
         return id;
     }
 
@@ -154,7 +172,9 @@ public class ModelUtils {
      */
     @SuppressWarnings("java:S1126")
     public static boolean isCollectionType(Class<?> type) {
-        if (type.isArray()) return !char[].class.equals(type);
+        if (type.isArray()) {
+            return !char[].class.equals(type);
+        }
         return Collection.class.isAssignableFrom(type);
     }
 
@@ -167,8 +187,12 @@ public class ModelUtils {
     @SuppressWarnings({"unchecked", "java:S1168"})
     @Nullable
     public static <T> Collection<T> getAsCollection(Object value) {
-        if (value instanceof Collection) return (Collection<T>) value;
-        if (value.getClass().isArray()) return Arrays.asList((T[]) value);
+        if (value instanceof Collection) {
+            return (Collection<T>) value;
+        }
+        if (value.getClass().isArray()) {
+            return Arrays.asList((T[]) value);
+        }
         return null;
     }
 
@@ -180,10 +204,13 @@ public class ModelUtils {
      */
     @Nullable
     public static Class<?> getCollectionType(Field field) {
-        if (field.getType().isArray()) return field.getType().getComponentType();
+        if (field.getType().isArray()) {
+            return field.getType().getComponentType();
+        }
         Type genType = field.getGenericType();
-        if (genType instanceof ParameterizedType)
+        if (genType instanceof ParameterizedType) {
             return (Class<?>) ((ParameterizedType) genType).getActualTypeArguments()[0];
+        }
         return null;
     }
 
@@ -194,10 +221,13 @@ public class ModelUtils {
      * @return type of elements
      */
     public static Class<?> getRequiredCollectionType(Field field) {
-        if (field.getType().isArray()) return field.getType().getComponentType();
+        if (field.getType().isArray()) {
+            return field.getType().getComponentType();
+        }
         Type genType = field.getGenericType();
-        if (genType instanceof ParameterizedType)
+        if (genType instanceof ParameterizedType) {
             return (Class<?>) ((ParameterizedType) genType).getActualTypeArguments()[0];
+        }
         throw new MappingException(
                 "Field is not a collection: "
                         + field.getDeclaringClass().getName()
@@ -217,7 +247,9 @@ public class ModelUtils {
                 field.set(collectionOwnerInstance, array);
                 return;
             }
-            if (ArrayUtils.contains(array, elementToAdd)) return;
+            if (ArrayUtils.contains(array, elementToAdd)) {
+                return;
+            }
             Object[] newArray =
                     (Object[])
                             Array.newInstance(field.getType().getComponentType(), array.length + 1);
@@ -234,7 +266,9 @@ public class ModelUtils {
                             field.getType(), getCollectionType(field), 10);
             field.set(collectionOwnerInstance, collectionInstance);
         }
-        if (!collectionInstance.contains(elementToAdd)) collectionInstance.add(elementToAdd);
+        if (!collectionInstance.contains(elementToAdd)) {
+            collectionInstance.add(elementToAdd);
+        }
     }
 
     @SuppressWarnings("java:S3011")
@@ -243,27 +277,37 @@ public class ModelUtils {
             throws IllegalAccessException {
         if (field.getType().isArray()) {
             Object[] array = (Object[]) field.get(collectionOwnerInstance);
-            if (array == null) return;
+            if (array == null) {
+                return;
+            }
             int index = -1;
-            for (int i = 0; i < array.length; ++i)
+            for (int i = 0; i < array.length; ++i) {
                 if (array[i] == elementToRemove) {
                     index = i;
                     break;
                 }
-            if (index < 0) return;
+            }
+            if (index < 0) {
+                return;
+            }
             Object[] newArray =
                     (Object[])
                             Array.newInstance(field.getType().getComponentType(), array.length - 1);
-            if (index > 0) System.arraycopy(array, 0, newArray, 0, index);
-            if (index < array.length - 1)
+            if (index > 0) {
+                System.arraycopy(array, 0, newArray, 0, index);
+            }
+            if (index < array.length - 1) {
                 System.arraycopy(array, index + 1, newArray, index, array.length - index - 1);
+            }
             field.set(collectionOwnerInstance, newArray);
             return;
         }
         @SuppressWarnings("unchecked")
         Collection<Object> collectionInstance =
                 (Collection<Object>) field.get(collectionOwnerInstance);
-        if (collectionInstance == null) return;
+        if (collectionInstance == null) {
+            return;
+        }
         collectionInstance.remove(elementToRemove);
     }
 
@@ -280,7 +324,9 @@ public class ModelUtils {
         } catch (IllegalAccessException e) {
             throw new ModelAccessException("Unable to get field value", e);
         }
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         if (property.isAnnotationPresent(ForeignKey.class)) {
             RelationalPersistentEntity<?> e =
                     client.getMappingContext().getRequiredPersistentEntity(value.getClass());
@@ -297,7 +343,9 @@ public class ModelUtils {
             MappingContext<RelationalPersistentEntity<?>, ? extends RelationalPersistentProperty>
                     mappingContext) {
         Object value = state.getPersistedValue(property.getName());
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         if (property.isAnnotationPresent(ForeignKey.class)) {
             RelationalPersistentEntity<?> e =
                     mappingContext.getRequiredPersistentEntity(value.getClass());
@@ -309,7 +357,9 @@ public class ModelUtils {
     public static List<RelationalPersistentProperty> getProperties(
             RelationalPersistentEntity<?> entityType, String... names) {
         ArrayList<RelationalPersistentProperty> list = new ArrayList<>(names.length);
-        for (String name : names) list.add(entityType.getRequiredPersistentProperty(name));
+        for (String name : names) {
+            list.add(entityType.getRequiredPersistentProperty(name));
+        }
         return list;
     }
 
@@ -317,14 +367,17 @@ public class ModelUtils {
             RelationalPersistentEntity<?> entityType,
             PersistentPropertyAccessor<?> accessor,
             LcReactiveDataRelationalClient client) {
-        if (entityType.hasIdProperty()) return getIdPropertyValue(entityType, accessor);
-        if (entityType.isAnnotationPresent(CompositeId.class))
+        if (entityType.hasIdProperty()) {
+            return getIdPropertyValue(entityType, accessor);
+        }
+        if (entityType.isAnnotationPresent(CompositeId.class)) {
             return getIdFromProperties(
                     getProperties(
                             entityType,
                             entityType.getRequiredAnnotation(CompositeId.class).properties()),
                     accessor,
                     client);
+        }
         return getIdFromProperties(entityType, accessor, client);
     }
 
@@ -345,13 +398,16 @@ public class ModelUtils {
     }
 
     public static Object getId(RelationalPersistentEntity<?> entityType, PropertiesSource source) {
-        if (entityType.hasIdProperty()) return getIdPropertyValue(entityType, source);
-        if (entityType.isAnnotationPresent(CompositeId.class))
+        if (entityType.hasIdProperty()) {
+            return getIdPropertyValue(entityType, source);
+        }
+        if (entityType.isAnnotationPresent(CompositeId.class)) {
             return getIdFromProperties(
                     getProperties(
                             entityType,
                             entityType.getRequiredAnnotation(CompositeId.class).properties()),
                     source);
+        }
         return getIdFromProperties(entityType, source);
     }
 
@@ -366,7 +422,9 @@ public class ModelUtils {
         for (RelationalPersistentProperty property : properties) {
             id.add(property.getName(), source.getPropertyValue(property));
         }
-        if (id.isNull()) return null;
+        if (id.isNull()) {
+            return null;
+        }
         return id;
     }
 
@@ -375,14 +433,15 @@ public class ModelUtils {
             RelationalPersistentEntity<?> entityType,
             PersistentPropertyAccessor<?> accessor,
             LcReactiveDataRelationalClient client) {
-        if (entityType.hasIdProperty())
+        if (entityType.hasIdProperty()) {
             return getConditionOnProperties(
                     query,
                     entityType,
                     Collections.singletonList(entityType.getRequiredIdProperty()),
                     accessor,
                     client);
-        if (entityType.isAnnotationPresent(CompositeId.class))
+        }
+        if (entityType.isAnnotationPresent(CompositeId.class)) {
             return getConditionOnProperties(
                     query,
                     entityType,
@@ -391,6 +450,7 @@ public class ModelUtils {
                             entityType.getRequiredAnnotation(CompositeId.class).properties()),
                     accessor,
                     client);
+        }
         return getConditionOnProperties(query, entityType, entityType, accessor, client);
     }
 
@@ -420,13 +480,14 @@ public class ModelUtils {
             RelationalPersistentEntity<?> entityType,
             PersistentPropertyAccessor<?> accessor,
             LcReactiveDataRelationalClient client) {
-        if (entityType.hasIdProperty())
+        if (entityType.hasIdProperty()) {
             return getCriteriaOnProperties(
                     entityName,
                     Collections.singletonList(entityType.getRequiredIdProperty()),
                     accessor,
                     client);
-        if (entityType.isAnnotationPresent(CompositeId.class))
+        }
+        if (entityType.isAnnotationPresent(CompositeId.class)) {
             return getCriteriaOnProperties(
                     entityName,
                     getProperties(
@@ -434,6 +495,7 @@ public class ModelUtils {
                             entityType.getRequiredAnnotation(CompositeId.class).properties()),
                     accessor,
                     client);
+        }
         return getCriteriaOnProperties(entityName, entityType, accessor, client);
     }
 
@@ -461,18 +523,25 @@ public class ModelUtils {
             MappingContext<RelationalPersistentEntity<?>, ? extends RelationalPersistentProperty>
                     mappingContext) {
         LcEntityTypeInfo typeInfo = LcEntityTypeInfo.get(entityType);
-        if (!typeInfo.getForeignTables().isEmpty() || !typeInfo.getJoinTables().isEmpty())
+        if (!typeInfo.getForeignTables().isEmpty() || !typeInfo.getJoinTables().isEmpty()) {
             return true;
+        }
         RelationalPersistentEntity<?> entity =
                 mappingContext.getRequiredPersistentEntity(entityType);
         for (RelationalPersistentProperty property : entity) {
             ForeignKey fkAnnotation = property.findAnnotation(ForeignKey.class);
-            if (fkAnnotation == null) continue;
-            if (fkAnnotation.cascadeDelete()) return true;
+            if (fkAnnotation == null) {
+                continue;
+            }
+            if (fkAnnotation.cascadeDelete()) {
+                return true;
+            }
             LcEntityTypeInfo foreignInfo = LcEntityTypeInfo.get(property.getActualType());
             ForeignTableInfo ft =
                     foreignInfo.getForeignTableWithFieldForJoinKey(property.getName(), entityType);
-            if (ft != null && !ft.getAnnotation().optional()) return true;
+            if (ft != null && !ft.getAnnotation().optional()) {
+                return true;
+            }
         }
         return false;
     }

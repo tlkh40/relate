@@ -46,9 +46,10 @@ public class LcEntityTypeInfo {
                 info.field = f;
                 info.annotation = jt;
                 info.joinForeignTable = foreignTables.get(f.getName() + "_join");
-                if (info.joinForeignTable == null)
+                if (info.joinForeignTable == null) {
                     throw new ModelAccessException(
                             "@JoinTable without corresponding @ForeignTable"); // should never
+                }
                 // happen with
                 // Enhancer
                 if (info.joinForeignTable.annotation.joinKey().equals(ATTRIBUTE1)) {
@@ -66,12 +67,13 @@ public class LcEntityTypeInfo {
 
     public static LcEntityTypeInfo get(Class<?> clazz) {
         LcEntityTypeInfo info = cache.get(clazz);
-        if (info == null)
+        if (info == null) {
             throw new ModelAccessException(
                     "Unknown entity class "
                             + clazz.getName()
                             + ", known classes are: "
                             + cache.keySet());
+        }
         return info;
     }
 
@@ -80,7 +82,9 @@ public class LcEntityTypeInfo {
     }
 
     public static void setClasses(Collection<Class<?>> classes) throws ModelException {
-        for (Class<?> cl : classes) cache.put(cl, new LcEntityTypeInfo(cl));
+        for (Class<?> cl : classes) {
+            cache.put(cl, new LcEntityTypeInfo(cl));
+        }
     }
 
     public static Collection<Class<?>> addGeneratedJoinTables(Collection<Class<?>> classes) {
@@ -90,9 +94,14 @@ public class LcEntityTypeInfo {
             for (JoinTableInfo joinTable : info.joinTables.values()) {
                 Field field = joinTable.joinForeignTable.field;
                 Class<?> type;
-                if (ModelUtils.isCollection(field)) type = ModelUtils.getCollectionType(field);
-                else type = field.getType();
-                if (type != null) result.add(type);
+                if (ModelUtils.isCollection(field)) {
+                    type = ModelUtils.getCollectionType(field);
+                } else {
+                    type = field.getType();
+                }
+                if (type != null) {
+                    result.add(type);
+                }
             }
         }
         return result;
@@ -106,9 +115,14 @@ public class LcEntityTypeInfo {
      */
     public static boolean isForeignTableField(Field field) {
         LcEntityTypeInfo ti = cache.get(field.getDeclaringClass());
-        if (ti == null) return false;
-        for (ForeignTableInfo i : ti.foreignTables.values())
-            if (i.getField().equals(field)) return true;
+        if (ti == null) {
+            return false;
+        }
+        for (ForeignTableInfo i : ti.foreignTables.values()) {
+            if (i.getField().equals(field)) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -155,9 +169,14 @@ public class LcEntityTypeInfo {
             if (ft.getAnnotation().joinKey().equals(joinKey)) {
                 Field field = ft.getField();
                 Class<?> fieldType;
-                if (ft.isCollection()) fieldType = ft.getCollectionElementType();
-                else fieldType = field.getType();
-                if (targetType.equals(fieldType)) return ft;
+                if (ft.isCollection()) {
+                    fieldType = ft.getCollectionElementType();
+                } else {
+                    fieldType = field.getType();
+                }
+                if (targetType.equals(fieldType)) {
+                    return ft;
+                }
             }
         }
         return null;
@@ -183,8 +202,9 @@ public class LcEntityTypeInfo {
     public ForeignTableInfo getRequiredForeignTableWithFieldForJoinKey(
             String joinKey, Class<?> targetType) {
         ForeignTableInfo i = getForeignTableWithFieldForJoinKey(joinKey, targetType);
-        if (i == null)
+        if (i == null) {
             throw new MappingException(missingForeignTable("field with join key", joinKey));
+        }
         return i;
     }
 
@@ -219,7 +239,9 @@ public class LcEntityTypeInfo {
      */
     public Field getRequiredForeignTableFieldForProperty(String propertyName) {
         ForeignTableInfo i = foreignTables.get(propertyName);
-        if (i == null) throw new MappingException(missingForeignTable("on property", propertyName));
+        if (i == null) {
+            throw new MappingException(missingForeignTable("on property", propertyName));
+        }
         return i.getField();
     }
 
@@ -243,7 +265,9 @@ public class LcEntityTypeInfo {
      */
     public ForeignTable getRequiredForeignTableForProperty(String propertyName) {
         ForeignTableInfo i = foreignTables.get(propertyName);
-        if (i == null) throw new MappingException(missingForeignTable("on property", propertyName));
+        if (i == null) {
+            throw new MappingException(missingForeignTable("on property", propertyName));
+        }
         return i.getAnnotation();
     }
 
@@ -306,7 +330,9 @@ public class LcEntityTypeInfo {
             this.field = field;
             this.annotation = annotation;
             isCollection = ModelUtils.isCollection(field);
-            if (isCollection) collectionElementType = ModelUtils.getRequiredCollectionType(field);
+            if (isCollection) {
+                collectionElementType = ModelUtils.getRequiredCollectionType(field);
+            }
         }
 
         public Field getField() {

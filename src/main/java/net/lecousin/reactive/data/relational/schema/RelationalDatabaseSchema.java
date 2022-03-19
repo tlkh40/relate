@@ -18,7 +18,11 @@ public class RelationalDatabaseSchema {
     }
 
     public Table getTable(String name) {
-        for (Table table : tables) if (table.getName().equals(name)) return table;
+        for (Table table : tables) {
+            if (table.getName().equals(name)) {
+                return table;
+            }
+        }
         throw new NoSuchElementException("Table " + name);
     }
 
@@ -31,7 +35,11 @@ public class RelationalDatabaseSchema {
     }
 
     public Sequence getSequence(String name) {
-        for (Sequence sequence : sequences) if (sequence.getName().equals(name)) return sequence;
+        for (Sequence sequence : sequences) {
+            if (sequence.getName().equals(name)) {
+                return sequence;
+            }
+        }
         throw new NoSuchElementException("Sequence " + name);
     }
 }

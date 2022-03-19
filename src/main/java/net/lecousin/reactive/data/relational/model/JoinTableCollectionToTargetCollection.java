@@ -74,13 +74,21 @@ public class JoinTableCollectionToTargetCollection<J, T> implements Set<T> {
 
     @Override
     public boolean contains(Object o) {
-        for (J jt : sourceCollection) if (Objects.equals(o, getTarget(jt))) return true;
+        for (J jt : sourceCollection) {
+            if (Objects.equals(o, getTarget(jt))) {
+                return true;
+            }
+        }
         return false;
     }
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        for (Object o : c) if (!contains(o)) return false;
+        for (Object o : c) {
+            if (!contains(o)) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -108,19 +116,24 @@ public class JoinTableCollectionToTargetCollection<J, T> implements Set<T> {
     @SuppressWarnings("unchecked")
     @Override
     public <R> R[] toArray(R[] a) {
-        if (a.length < sourceCollection.size())
+        if (a.length < sourceCollection.size()) {
             a =
                     (R[])
                             java.lang.reflect.Array.newInstance(
                                     a.getClass().getComponentType(), sourceCollection.size());
+        }
         int i = 0;
-        for (T e : this) a[i++] = (R) e;
+        for (T e : this) {
+            a[i++] = (R) e;
+        }
         return a;
     }
 
     @Override
     public boolean add(T e) {
-        if (contains(e)) return false;
+        if (contains(e)) {
+            return false;
+        }
         try {
             @SuppressWarnings("unchecked")
             J join = (J) joinClass.getConstructor().newInstance();
@@ -137,35 +150,41 @@ public class JoinTableCollectionToTargetCollection<J, T> implements Set<T> {
     @Override
     public boolean addAll(Collection<? extends T> c) {
         boolean result = false;
-        for (T e : c) result |= add(e);
+        for (T e : c) {
+            result |= add(e);
+        }
         return result;
     }
 
     @Override
     public boolean remove(Object o) {
-        for (Iterator<J> it = sourceCollection.iterator(); it.hasNext(); )
+        for (Iterator<J> it = sourceCollection.iterator(); it.hasNext(); ) {
             if (Objects.equals(o, getTarget(it.next()))) {
                 it.remove();
                 return true;
             }
+        }
         return false;
     }
 
     @Override
     public boolean removeAll(Collection<?> c) {
         boolean result = false;
-        for (Object e : c) result |= remove(e);
+        for (Object e : c) {
+            result |= remove(e);
+        }
         return result;
     }
 
     @Override
     public boolean retainAll(@NonNull Collection<?> c) {
         boolean result = false;
-        for (Iterator<J> it = sourceCollection.iterator(); it.hasNext(); )
+        for (Iterator<J> it = sourceCollection.iterator(); it.hasNext(); ) {
             if (!c.contains(getTarget(it.next()))) {
                 it.remove();
                 result = true;
             }
+        }
         return result;
     }
 }

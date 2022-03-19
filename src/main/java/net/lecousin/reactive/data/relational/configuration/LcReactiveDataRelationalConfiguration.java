@@ -58,12 +58,14 @@ public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2db
 
     @Bean
     @Override
-    public @NonNull LcReactiveDataAccessStrategy reactiveDataAccessStrategy(@NonNull R2dbcConverter converter) {
+    public @NonNull
+    LcReactiveDataAccessStrategy reactiveDataAccessStrategy(@NonNull R2dbcConverter converter) {
         return new LcReactiveDataAccessStrategy(getDialect(getConnectionFactory()), (LcMappingR2dbcConverter) converter);
     }
 
     @Override
-    public @NonNull MappingR2dbcConverter r2dbcConverter(
+    public @NonNull
+    MappingR2dbcConverter r2dbcConverter(
             @NonNull R2dbcMappingContext mappingContext,
             @NonNull R2dbcCustomConversions r2dbcCustomConversions
     ) {
@@ -72,7 +74,8 @@ public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2db
 
     @Bean
     @Override
-    public @NonNull  R2dbcEntityTemplate r2dbcEntityTemplate(
+    public @NonNull
+    R2dbcEntityTemplate r2dbcEntityTemplate(
             @NonNull DatabaseClient databaseClient,
             @NonNull ReactiveDataAccessStrategy dataAccessStrategy
     ) {
@@ -80,7 +83,8 @@ public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2db
     }
 
     @Override
-    public @NonNull ConnectionFactory connectionFactory() {
+    public @NonNull
+    ConnectionFactory connectionFactory() {
         //noinspection ConstantConditions
         return null;
     }
@@ -100,7 +104,9 @@ public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2db
 
         ConnectionFactory factory = connectionFactory();
         //noinspection ConstantConditions
-        if (factory == null) throw new RuntimeException("No r2dbc connection factory defined");
+        if (factory == null) {
+            throw new RuntimeException("No r2dbc connection factory defined");
+        }
         return factory;
     }
 }

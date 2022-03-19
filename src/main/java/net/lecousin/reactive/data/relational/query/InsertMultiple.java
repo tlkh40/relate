@@ -28,8 +28,9 @@ public class InsertMultiple {
         this.into = into;
         this.columns = new ArrayList<>(columns);
         this.values = new ArrayList<>(values.size());
-        for (List<Expression> list : values)
+        for (List<Expression> list : values) {
             this.values.add(new InsertRowValues(new ArrayList<>(list)));
+        }
     }
 
     private static String render(SqlIdentifier identifier, RenderContext renderContext) {
@@ -37,33 +38,45 @@ public class InsertMultiple {
     }
 
     private static String render(Expression expression, RenderContext renderContext) {
-        if (expression instanceof Named)
+        if (expression instanceof Named) {
             return render(((Named) expression).getName(), renderContext);
+        }
         return expression.toString();
     }
 
     public String render(RenderContext renderContext) {
-        if (renderContext == null) renderContext = new SimpleRenderContext();
+        if (renderContext == null) {
+            renderContext = new SimpleRenderContext();
+        }
         StringBuilder sql = new StringBuilder(512 + 16 * values.size());
         sql.append("INSERT INTO ");
         sql.append(render(renderContext.getNamingStrategy().getName(into), renderContext));
         sql.append(" (");
         boolean first = true;
         for (Column col : columns) {
-            if (first) first = false;
-            else sql.append(',');
+            if (first) {
+                first = false;
+            } else {
+                sql.append(',');
+            }
             sql.append(render(renderContext.getNamingStrategy().getName(col), renderContext));
         }
         sql.append(") VALUES ");
         first = true;
         for (InsertRowValues row : values) {
-            if (first) first = false;
-            else sql.append(',');
+            if (first) {
+                first = false;
+            } else {
+                sql.append(',');
+            }
             sql.append('(');
             boolean firstValue = true;
             for (Expression value : row.expressions) {
-                if (firstValue) firstValue = false;
-                else sql.append(',');
+                if (firstValue) {
+                    firstValue = false;
+                } else {
+                    sql.append(',');
+                }
                 sql.append(render(value, renderContext));
             }
             sql.append(')');
@@ -106,17 +119,20 @@ public class InsertMultiple {
         }
 
         @Override
-        public @NonNull IdentifierProcessing getIdentifierProcessing() {
+        public @NonNull
+        IdentifierProcessing getIdentifierProcessing() {
             return IdentifierProcessing.NONE;
         }
 
         @Override
-        public @NonNull SelectRenderContext getSelect() {
+        public @NonNull
+        SelectRenderContext getSelect() {
             return DefaultSelectRenderContext.INSTANCE;
         }
 
         @Override
-        public @NonNull RenderNamingStrategy getNamingStrategy() {
+        public @NonNull
+        RenderNamingStrategy getNamingStrategy() {
             return this.namingStrategy;
         }
 

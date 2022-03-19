@@ -11,7 +11,8 @@ public class LcR2dbcRepositoryFactory extends R2dbcRepositoryFactory {
     }
 
     @Override
-    protected @NonNull Class<?> getRepositoryBaseClass(@NonNull RepositoryMetadata metadata) {
+    protected @NonNull
+    Class<?> getRepositoryBaseClass(@NonNull RepositoryMetadata metadata) {
         return LcR2dbcRepositoryImpl.class;
     }
 }

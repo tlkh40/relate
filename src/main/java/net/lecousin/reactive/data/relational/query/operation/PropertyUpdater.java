@@ -31,7 +31,9 @@ class PropertyUpdater extends AbstractProcessor<PropertyUpdater.Request> {
         for (Map.Entry<Object, Set<Object>> update : reverseMap.entrySet()) {
             SqlQuery<Update> query = new SqlQuery<>(op.lcClient);
             List<Expression> values = new ArrayList<>(update.getValue().size());
-            for (Object value : update.getValue()) values.add(query.marker(value));
+            for (Object value : update.getValue()) {
+                values.add(query.marker(value));
+            }
             List<AssignValue> assignments = new LinkedList<>();
             assignments.add(
                     AssignValue.create(
@@ -39,7 +41,7 @@ class PropertyUpdater extends AbstractProcessor<PropertyUpdater.Request> {
                             update.getKey() != null
                                     ? query.marker(update.getKey())
                                     : SQL.nullLiteral()));
-            if (versionProperty != null)
+            if (versionProperty != null) {
                 assignments.add(
                         AssignValue.create(
                                 Column.create(versionProperty.getColumnName(), table),
@@ -48,6 +50,7 @@ class PropertyUpdater extends AbstractProcessor<PropertyUpdater.Request> {
                                                 Column.create(
                                                         versionProperty.getColumnName(), table),
                                                 op.lcClient))));
+            }
             Condition where = Conditions.in(Column.create(property.getColumnName(), table), values);
             for (SaveRequest save :
                     op.save.getPendingRequests(
@@ -59,7 +62,7 @@ class PropertyUpdater extends AbstractProcessor<PropertyUpdater.Request> {
                                                             s.state,
                                                             property,
                                                             op.lcClient.getMappingContext())))) {
-                if (save.state.isPersisted())
+                if (save.state.isPersisted()) {
                     where =
                             where.and(
                                     ModelUtils.getConditionOnId(
@@ -68,6 +71,7 @@ class PropertyUpdater extends AbstractProcessor<PropertyUpdater.Request> {
                                                     save.accessor,
                                                     op.lcClient)
                                             .not());
+                }
                 save.accessor.setProperty(property, update.getKey());
             }
             query.setQuery(Update.builder().table(table).set(assignments).where(where).build());
@@ -102,14 +106,18 @@ class PropertyUpdater extends AbstractProcessor<PropertyUpdater.Request> {
                 Map<Object, Set<Object>> reverseMap = new HashMap<>();
                 List<Request> ready = new LinkedList<>();
                 for (Map.Entry<Object, Request> entry : property.getValue().entrySet()) {
-                    if (!canExecuteRequest(entry.getValue())) continue;
+                    if (!canExecuteRequest(entry.getValue())) {
+                        continue;
+                    }
                     Set<Object> set =
                             reverseMap.computeIfAbsent(
                                     entry.getValue().newValue, e -> new HashSet<>());
                     set.add(entry.getKey());
                     ready.add(entry.getValue());
                 }
-                if (reverseMap.isEmpty()) continue;
+                if (reverseMap.isEmpty()) {
+                    continue;
+                }
                 executeUpdates(
                         op,
                         reverseMap,

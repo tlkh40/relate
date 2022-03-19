@@ -19,7 +19,9 @@ public class SchemaStatements {
     private final List<SchemaStatement> statements = new LinkedList<>();
 
     private static String log(String sql) {
-        if (LOGGER.isDebugEnabled()) LOGGER.debug(sql);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(sql);
+        }
         return sql;
     }
 
@@ -36,7 +38,9 @@ public class SchemaStatements {
         synchronized (statements) {
             for (Iterator<SchemaStatement> it = statements.iterator(); it.hasNext(); ) {
                 SchemaStatement s = it.next();
-                if (s.hasDependency() || !s.canExecuteWith(ready)) continue;
+                if (s.hasDependency() || !s.canExecuteWith(ready)) {
+                    continue;
+                }
                 ready.add(s);
                 it.remove();
             }
@@ -46,7 +50,9 @@ public class SchemaStatements {
 
     private void done(SchemaStatement done) {
         synchronized (statements) {
-            for (SchemaStatement s : statements) s.removeDependency(done);
+            for (SchemaStatement s : statements) {
+                s.removeDependency(done);
+            }
         }
     }
 

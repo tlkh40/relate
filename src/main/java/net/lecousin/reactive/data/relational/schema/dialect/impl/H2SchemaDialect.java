@@ -22,19 +22,23 @@ public class H2SchemaDialect extends RelationalDatabaseSchemaDialect {
 
     @Override
     public Object convertToDataBase(Object value, RelationalPersistentProperty property) {
-        if (value instanceof java.time.OffsetTime) return value.toString();
+        if (value instanceof java.time.OffsetTime) {
+            return value.toString();
+        }
         if (value instanceof String) {
             ColumnDefinition def = property.findAnnotation(ColumnDefinition.class);
-            if (def != null && def.min() > 0 && ((String) value).length() < def.min())
+            if (def != null && def.min() > 0 && ((String) value).length() < def.min()) {
                 value = StringUtils.rightPad((String) value, (int) def.min(), ' ');
+            }
         }
         return super.convertToDataBase(value, property);
     }
 
     @Override
     public Object convertFromDataBase(Object value, Class<?> targetType) {
-        if (targetType.equals(java.time.OffsetTime.class))
+        if (targetType.equals(java.time.OffsetTime.class)) {
             return java.time.OffsetTime.parse((CharSequence) value);
+        }
         return super.convertFromDataBase(value, targetType);
     }
 
@@ -47,7 +51,9 @@ public class H2SchemaDialect extends RelationalDatabaseSchemaDialect {
     protected String getColumnTypeDateTimeWithTimeZone(
             Column col, Class<?> type, ColumnDefinition def) {
         int precision = def != null ? def.precision() : -1;
-        if (precision < 0) precision = DEFAULT_TIME_PRECISION;
+        if (precision < 0) {
+            precision = DEFAULT_TIME_PRECISION;
+        }
         return "TIMESTAMP(" + precision + ") WITH TIME ZONE";
     }
 

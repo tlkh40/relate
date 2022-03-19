@@ -15,7 +15,10 @@ repositories {
 dependencies {
     compileOnly(group = "org.springframework.boot", name = "spring-boot-starter-data-r2dbc", version = DependencyVersions.SPRING_BOOT)
     implementation(group = "org.apache.commons", name = "commons-lang3", version = DependencyVersions.COMMONS_LANG3)
-    implementation(group = "org.javassist", name = "javassist", version = DependencyVersions.JAVASSIST)
+    implementation(group = "org.javassist", name = "javassist", version = DependencyVersions.JAVASSIST) // for removal
+    implementation(group = "net.bytebuddy", name = "byte-buddy", version = DependencyVersions.BYTEBUDDY)
+    implementation(group = "net.bytebuddy", name = "byte-buddy-agent", version = DependencyVersions.BYTEBUDDY)
+    implementation(group = "io.github.classgraph", name = "classgraph", version = DependencyVersions.CLASSGRAPH)
 
     // R2DBC drivers
 

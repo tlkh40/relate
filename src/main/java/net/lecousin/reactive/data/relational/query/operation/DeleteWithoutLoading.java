@@ -31,14 +31,17 @@ class DeleteWithoutLoading extends AbstractProcessor<DeleteWithoutLoading.Reques
         for (Map.Entry<SqlIdentifier, Set<Object>> e : valuesByColumn.entrySet()) {
             Column col = Column.create(e.getKey(), table);
             List<Expression> list = new ArrayList<>(e.getValue().size());
-            for (Object value : e.getValue()) list.add(query.marker(value));
+            for (Object value : e.getValue()) {
+                list.add(query.marker(value));
+            }
             Condition c = Conditions.in(col, list);
             condition = condition != null ? condition.or(c) : c;
         }
 
-        if (LcReactiveDataRelationalClient.logger.isDebugEnabled())
-            LcReactiveDataRelationalClient.logger.debug(
+        if (LcReactiveDataRelationalClient.log.isDebugEnabled()) {
+            LcReactiveDataRelationalClient.log.debug(
                     "Delete " + entityType.getType().getName() + " where " + condition);
+        }
         return condition;
     }
 
@@ -47,9 +50,11 @@ class DeleteWithoutLoading extends AbstractProcessor<DeleteWithoutLoading.Reques
             RelationalPersistentProperty whereProperty,
             Object whereValue) {
         List<Request> list = requests.computeIfAbsent(entity, e -> new LinkedList<>());
-        for (Request r : list)
-            if (r.whereProperty.equals(whereProperty) && Objects.equals(r.whereValue, whereValue))
+        for (Request r : list) {
+            if (r.whereProperty.equals(whereProperty) && Objects.equals(r.whereValue, whereValue)) {
                 return r;
+            }
+        }
         Request r = new Request(entity, whereProperty, whereValue);
         list.add(r);
         return r;
@@ -61,8 +66,14 @@ class DeleteWithoutLoading extends AbstractProcessor<DeleteWithoutLoading.Reques
         List<Mono<Void>> calls = new LinkedList<>();
         for (Map.Entry<RelationalPersistentEntity<?>, List<Request>> entity : requests.entrySet()) {
             List<Request> ready = new LinkedList<>();
-            for (Request r : entity.getValue()) if (canExecuteRequest(r)) ready.add(r);
-            if (ready.isEmpty()) continue;
+            for (Request r : entity.getValue()) {
+                if (canExecuteRequest(r)) {
+                    ready.add(r);
+                }
+            }
+            if (ready.isEmpty()) {
+                continue;
+            }
             SqlQuery<Delete> query = new SqlQuery<>(op.lcClient);
             Table table = Table.create(entity.getKey().getTableName());
             Condition condition = createCondition(entity.getKey(), table, ready, query);

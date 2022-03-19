@@ -11,7 +11,9 @@ abstract class AbstractProcessor<R extends AbstractProcessor.Request> {
     protected abstract Mono<Void> executeRequests(Operation op);
 
     protected boolean canExecuteRequest(R request) {
-        if (!request.canExecute()) return false;
+        if (!request.canExecute()) {
+            return false;
+        }
         request.dependencies.removeIf(Request::isDone);
         return request.dependencies.isEmpty();
     }
@@ -32,8 +34,9 @@ abstract class AbstractProcessor<R extends AbstractProcessor.Request> {
         }
 
         void dependsOn(Request dependency) {
-            if (dependency.dependencies.contains(this))
+            if (dependency.dependencies.contains(this)) {
                 throw new IllegalStateException("Cyclic dependency between requests");
+            }
             dependencies.add(dependency);
         }
 

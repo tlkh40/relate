@@ -57,11 +57,13 @@ public class EntityState {
             EntityState state = (EntityState) fieldInfo.get(entity);
             if (state == null) {
                 RelationalPersistentEntity<?> type;
-                if (entityType == null)
+                if (entityType == null) {
                     type =
                             client.getMappingContext()
                                     .getRequiredPersistentEntity(entity.getClass());
-                else type = entityType;
+                } else {
+                    type = entityType;
+                }
                 state = new EntityState(client, type);
                 fieldInfo.set(entity, state);
             }
@@ -85,13 +87,14 @@ public class EntityState {
                             } catch (Exception e) {
                                 return Flux.error(e);
                             }
-                            for (Object element : list)
+                            for (Object element : list) {
                                 try {
                                     fk.set(element, entity);
                                 } catch (Exception e) {
                                     throw new ModelAccessException(
                                             "Unable to set field " + fk.getName(), e);
                                 }
+                            }
                             return Flux.fromIterable(list);
                         });
     }
@@ -129,7 +132,9 @@ public class EntityState {
 
     @SuppressWarnings("unchecked")
     public synchronized <T> Mono<T> loading(Supplier<Mono<T>> doLoading) {
-        if (loading != null) return (Mono<T>) loading;
+        if (loading != null) {
+            return (Mono<T>) loading;
+        }
         loading =
                 doLoading
                         .get()
@@ -161,7 +166,9 @@ public class EntityState {
             if (Enhancer.STATE_FIELD_NAME.equals(f.getName())
                     || f.isAnnotationPresent(Transient.class)
                     || f.isAnnotationPresent(Autowired.class)
-                    || f.isAnnotationPresent(Value.class)) continue;
+                    || f.isAnnotationPresent(Value.class)) {
+                continue;
+            }
             f.setAccessible(true);
             try {
                 savePersistedValue(f, f.get(entity));
@@ -271,11 +278,14 @@ public class EntityState {
             throws IllegalAccessException {
         field.setAccessible(true);
         Object instance = field.get(entity);
-        if (instance != null) return new MutableObject<>((T) instance);
+        if (instance != null) {
+            return new MutableObject<>((T) instance);
+        }
         if (foreignTablesLoaded.containsKey(field.getName())
                 || (persistedValues.containsKey(field.getName())
-                && persistedValues.get(field.getName()) != null))
+                && persistedValues.get(field.getName()) != null)) {
             return new MutableObject<>(null);
+        }
         return null;
     }
 
@@ -283,10 +293,13 @@ public class EntityState {
     public <T> Mono<T> lazyGetForeignTableField(Object entity, String fieldName, String joinKey) {
         try {
             CorePublisher<?> foreignLoading = foreignTablesLoaded.get(fieldName);
-            if (foreignLoading != null) return (Mono<T>) foreignLoading;
+            if (foreignLoading != null) {
+                return (Mono<T>) foreignLoading;
+            }
             MutableObject<T> instance = getForeignTableField(entity, fieldName);
-            if (instance != null)
+            if (instance != null) {
                 return instance.getValue() != null ? Mono.just(instance.getValue()) : Mono.empty();
+            }
             Field field = entity.getClass().getDeclaredField(fieldName);
             Object id = ModelUtils.getRequiredId(entity, entityType, null);
             RelationalPersistentEntity<?> elementEntity =
@@ -325,12 +338,18 @@ public class EntityState {
             Object entity, String fieldName, String joinKey) {
         try {
             CorePublisher<?> foreignLoading = foreignTablesLoaded.get(fieldName);
-            if (foreignLoading != null) return (Flux<T>) foreignLoading;
+            if (foreignLoading != null) {
+                return (Flux<T>) foreignLoading;
+            }
             MutableObject<?> instance = getForeignTableField(entity, fieldName);
             if (instance != null) {
-                if (instance.getValue() == null) return Flux.empty();
+                if (instance.getValue() == null) {
+                    return Flux.empty();
+                }
                 Object collection = instance.getValue();
-                if (collection.getClass().isArray()) return Flux.fromArray((T[]) collection);
+                if (collection.getClass().isArray()) {
+                    return Flux.fromArray((T[]) collection);
+                }
                 return Flux.fromIterable((Iterable<T>) collection);
             }
 
@@ -338,8 +357,9 @@ public class EntityState {
             field.setAccessible(true);
             Object id = ModelUtils.getRequiredId(entity, entityType, null);
             Class<?> elementType = ModelUtils.getCollectionType(field);
-            if (elementType == null)
+            if (elementType == null) {
                 throw new MappingException("Property is not a collection: " + fieldName);
+            }
             RelationalPersistentEntity<?> elementEntity =
                     client.getMappingContext().getRequiredPersistentEntity(elementType);
             RelationalPersistentProperty fkProperty =
@@ -351,8 +371,11 @@ public class EntityState {
 
             Field fk = elementType.getDeclaredField(joinKey);
             fk.setAccessible(true);
-            if (field.getType().isArray()) flux = toArray(flux, field, entity, elementType, fk);
-            else flux = toCollection(flux, field, entity, elementType, fk);
+            if (field.getType().isArray()) {
+                flux = toArray(flux, field, entity, elementType, fk);
+            } else {
+                flux = toCollection(flux, field, entity, elementType, fk);
+            }
             flux = flux.cache();
             foreignTablesLoaded.put(fieldName, flux);
             return flux;

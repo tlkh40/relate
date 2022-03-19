@@ -29,23 +29,29 @@ public class MySQLSchemaDialect extends RelationalDatabaseSchemaDialect {
     public Object convertToDataBase(Object value, RelationalPersistentProperty property) {
         if (value instanceof String) {
             ColumnDefinition def = property.findAnnotation(ColumnDefinition.class);
-            if (def != null && def.min() > 0 && ((String) value).length() < def.min())
+            if (def != null && def.min() > 0 && ((String) value).length() < def.min()) {
                 value = StringUtils.rightPad((String) value, (int) def.min(), ' ');
+            }
         }
-        if (value instanceof UUID) value = value.toString();
+        if (value instanceof UUID) {
+            value = value.toString();
+        }
         return super.convertToDataBase(value, property);
     }
 
     @Override
     public Object convertFromDataBase(Object value, Class<?> targetType) {
-        if (UUID.class.equals(targetType)) return UUID.fromString((String) value);
+        if (UUID.class.equals(targetType)) {
+            return UUID.fromString((String) value);
+        }
         if (value instanceof Long) {
-            if (Byte.class.equals(targetType) || byte.class.equals(targetType))
+            if (Byte.class.equals(targetType) || byte.class.equals(targetType)) {
                 value = ((Long) value).byteValue();
-            else if (Short.class.equals(targetType) || short.class.equals(targetType))
+            } else if (Short.class.equals(targetType) || short.class.equals(targetType)) {
                 value = ((Long) value).shortValue();
-            else if (Integer.class.equals(targetType) || int.class.equals(targetType))
+            } else if (Integer.class.equals(targetType) || int.class.equals(targetType)) {
                 value = ((Long) value).intValue();
+            }
         }
         return super.convertFromDataBase(value, targetType);
     }
@@ -87,14 +93,20 @@ public class MySQLSchemaDialect extends RelationalDatabaseSchemaDialect {
 
     @Override
     protected void addIndexDefinitionInTable(Table table, Index index, StringBuilder sql) {
-        if (index.isUnique()) sql.append("CONSTRAINT UNIQUE INDEX ");
-        else sql.append("INDEX ");
+        if (index.isUnique()) {
+            sql.append("CONSTRAINT UNIQUE INDEX ");
+        } else {
+            sql.append("INDEX ");
+        }
         sql.append(index.getName());
         sql.append('(');
         boolean first = true;
         for (String col : index.getColumns()) {
-            if (first) first = false;
-            else sql.append(',');
+            if (first) {
+                first = false;
+            } else {
+                sql.append(',');
+            }
             sql.append(col);
         }
         sql.append(')');
@@ -138,12 +150,17 @@ public class MySQLSchemaDialect extends RelationalDatabaseSchemaDialect {
 
     @Override
     public Expression countDistinct(List<Expression> expressions) {
-        if (expressions.size() == 1) return super.countDistinct(expressions);
+        if (expressions.size() == 1) {
+            return super.countDistinct(expressions);
+        }
         List<Expression> concat = new ArrayList<>(expressions.size() * 2);
         boolean first = true;
         for (Expression e : expressions) {
-            if (first) first = false;
-            else concat.add(SQL.literalOf("_"));
+            if (first) {
+                first = false;
+            } else {
+                concat.add(SQL.literalOf("_"));
+            }
             concat.add(e);
         }
         return Functions.count(

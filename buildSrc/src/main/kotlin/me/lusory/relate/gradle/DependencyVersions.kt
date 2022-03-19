@@ -4,6 +4,8 @@ object DependencyVersions {
     const val SPRING_BOOT = "2.6.4"
     const val COMMONS_LANG3 = "3.12.0"
     const val JAVASSIST = "3.28.0-GA"
+    const val BYTEBUDDY = "1.12.8"
+    const val CLASSGRAPH = "4.8.141"
 
     // R2DBC drivers
 

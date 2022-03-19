@@ -11,7 +11,6 @@ import org.springframework.data.relational.core.sql.SimpleFunction;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.ServiceLoader;
 import java.util.stream.StreamSupport;
 
 @SuppressWarnings({
@@ -33,8 +32,9 @@ public abstract class RelationalDatabaseSchemaDialect {
     }
 
     private static void addAlterTable(MutableObject<SchemaStatement> latestAlterTable, SchemaStatement alterTable) {
-        if (latestAlterTable.getValue() != null)
+        if (latestAlterTable.getValue() != null) {
             alterTable.addDependency(latestAlterTable.getValue());
+        }
         latestAlterTable.setValue(alterTable);
     }
 
@@ -52,35 +52,57 @@ public abstract class RelationalDatabaseSchemaDialect {
 
     @SuppressWarnings("java:S3776") // complexity
     public String getColumnType(Column col, Class<?> type, ColumnDefinition def) {
-        if (boolean.class.equals(type) || Boolean.class.equals(type))
+        if (boolean.class.equals(type) || Boolean.class.equals(type)) {
             return getColumnTypeBoolean(col, type, def);
-        if (byte.class.equals(type) || Byte.class.equals(type))
+        }
+        if (byte.class.equals(type) || Byte.class.equals(type)) {
             return getColumnTypeByte(col, type, def);
-        if (short.class.equals(type) || Short.class.equals(type))
+        }
+        if (short.class.equals(type) || Short.class.equals(type)) {
             return getColumnTypeShort(col, type, def);
-        if (int.class.equals(type) || Integer.class.equals(type))
+        }
+        if (int.class.equals(type) || Integer.class.equals(type)) {
             return getColumnTypeInteger(col, type, def);
-        if (long.class.equals(type) || Long.class.equals(type))
+        }
+        if (long.class.equals(type) || Long.class.equals(type)) {
             return getColumnTypeLong(col, type, def);
-        if (float.class.equals(type) || Float.class.equals(type))
+        }
+        if (float.class.equals(type) || Float.class.equals(type)) {
             return getColumnTypeFloat(col, type, def);
-        if (double.class.equals(type) || Double.class.equals(type))
+        }
+        if (double.class.equals(type) || Double.class.equals(type)) {
             return getColumnTypeDouble(col, type, def);
-        if (BigDecimal.class.equals(type)) return getColumnTypeBigDecimal(col, type, def);
-        if (String.class.equals(type) || char[].class.equals(type))
+        }
+        if (BigDecimal.class.equals(type)) {
+            return getColumnTypeBigDecimal(col, type, def);
+        }
+        if (String.class.equals(type) || char[].class.equals(type)) {
             return getColumnTypeString(col, type, def);
-        if (char.class.equals(type) || Character.class.equals(type))
+        }
+        if (char.class.equals(type) || Character.class.equals(type)) {
             return getColumnTypeChar(col, type, def);
-        if (java.time.LocalDate.class.equals(type)) return getColumnTypeDate(col, type, def);
-        if (java.time.LocalTime.class.equals(type)) return getColumnTypeTime(col, type, def);
-        if (java.time.OffsetTime.class.equals(type))
+        }
+        if (java.time.LocalDate.class.equals(type)) {
+            return getColumnTypeDate(col, type, def);
+        }
+        if (java.time.LocalTime.class.equals(type)) {
+            return getColumnTypeTime(col, type, def);
+        }
+        if (java.time.OffsetTime.class.equals(type)) {
             return getColumnTypeTimeWithTimeZone(col, type, def);
-        if (java.time.LocalDateTime.class.equals(type))
+        }
+        if (java.time.LocalDateTime.class.equals(type)) {
             return getColumnTypeDateTime(col, type, def);
-        if (java.time.ZonedDateTime.class.equals(type))
+        }
+        if (java.time.ZonedDateTime.class.equals(type)) {
             return getColumnTypeDateTimeWithTimeZone(col, type, def);
-        if (java.time.Instant.class.equals(type)) return getColumnTypeTimestamp(col, type, def);
-        if (UUID.class.equals(type)) return getColumnTypeUUID(col, type, def);
+        }
+        if (java.time.Instant.class.equals(type)) {
+            return getColumnTypeTimestamp(col, type, def);
+        }
+        if (UUID.class.equals(type)) {
+            return getColumnTypeUUID(col, type, def);
+        }
         throw new SchemaException(
                 "Column type not supported: "
                         + type.getName()
@@ -124,9 +146,13 @@ public abstract class RelationalDatabaseSchemaDialect {
 
     protected String getColumnTypeBigDecimal(Column col, Class<?> type, ColumnDefinition def) {
         int precision = def != null ? def.precision() : -1;
-        if (precision < 0) precision = DEFAULT_FLOATING_POINT_PRECISION;
+        if (precision < 0) {
+            precision = DEFAULT_FLOATING_POINT_PRECISION;
+        }
         int scale = def != null ? def.scale() : -1;
-        if (scale < 0) scale = DEFAULT_FLOATING_POINT_SCALE;
+        if (scale < 0) {
+            scale = DEFAULT_FLOATING_POINT_SCALE;
+        }
         return "DECIMAL(" + precision + "," + scale + ")";
     }
 
@@ -150,7 +176,9 @@ public abstract class RelationalDatabaseSchemaDialect {
 
     protected String getColumnTypeTimestamp(Column col, Class<?> type, ColumnDefinition def) {
         int precision = def != null ? def.precision() : -1;
-        if (precision < 0) precision = DEFAULT_TIME_PRECISION;
+        if (precision < 0) {
+            precision = DEFAULT_TIME_PRECISION;
+        }
         return "TIMESTAMP(" + precision + ")";
     }
 
@@ -160,13 +188,15 @@ public abstract class RelationalDatabaseSchemaDialect {
 
     protected String getColumnTypeTime(Column col, Class<?> type, ColumnDefinition def) {
         int precision = def != null ? def.precision() : -1;
-        if (precision < 0) precision = DEFAULT_TIME_PRECISION;
+        if (precision < 0) {
+            precision = DEFAULT_TIME_PRECISION;
+        }
         return "TIME(" + precision + ")";
     }
 
     protected String getColumnTypeTimeWithTimeZone(
             Column col, Class<?> type, ColumnDefinition def) {
-        if (!isTimeZoneSupported())
+        if (!isTimeZoneSupported()) {
             throw new SchemaException(
                     "Time with timezone not supported by "
                             + getName()
@@ -174,20 +204,25 @@ public abstract class RelationalDatabaseSchemaDialect {
                             + col.getName()
                             + " on type "
                             + type.getName());
+        }
         int precision = def != null ? def.precision() : -1;
-        if (precision < 0) precision = DEFAULT_TIME_PRECISION;
+        if (precision < 0) {
+            precision = DEFAULT_TIME_PRECISION;
+        }
         return "TIME(" + precision + ") WITH TIME ZONE";
     }
 
     protected String getColumnTypeDateTime(Column col, Class<?> type, ColumnDefinition def) {
         int precision = def != null ? def.precision() : -1;
-        if (precision < 0) precision = DEFAULT_TIME_PRECISION;
+        if (precision < 0) {
+            precision = DEFAULT_TIME_PRECISION;
+        }
         return "DATETIME(" + precision + ")";
     }
 
     protected String getColumnTypeDateTimeWithTimeZone(
             Column col, Class<?> type, ColumnDefinition def) {
-        if (!isTimeZoneSupported())
+        if (!isTimeZoneSupported()) {
             throw new SchemaException(
                     "DateTime with timezone not supported by "
                             + getName()
@@ -195,8 +230,11 @@ public abstract class RelationalDatabaseSchemaDialect {
                             + col.getName()
                             + " on type "
                             + type.getName());
+        }
         int precision = def != null ? def.precision() : -1;
-        if (precision < 0) precision = DEFAULT_TIME_PRECISION;
+        if (precision < 0) {
+            precision = DEFAULT_TIME_PRECISION;
+        }
         return "DATETIME(" + precision + ") WITH TIME ZONE";
     }
 
@@ -216,17 +254,22 @@ public abstract class RelationalDatabaseSchemaDialect {
         // add dependencies for foreign keys
         for (Table table : schema.getTables()) {
             for (Column col : table.getColumns()) {
-                if (col.getForeignKeyReferences() == null) continue;
-                if (col.getForeignKeyReferences().getFirst() != table)
+                if (col.getForeignKeyReferences() == null) {
+                    continue;
+                }
+                if (col.getForeignKeyReferences().getFirst() != table) {
                     dropTableMap
                             .get(col.getForeignKeyReferences().getFirst())
                             .addDependency(dropTableMap.get(table));
+                }
             }
         }
         // drop sequences
-        if (supportsSequence())
-            for (Sequence s : schema.getSequences())
+        if (supportsSequence()) {
+            for (Sequence s : schema.getSequences()) {
                 toExecute.add(new SchemaStatement(dropSequence(s)));
+            }
+        }
         return toExecute;
     }
 
@@ -250,7 +293,9 @@ public abstract class RelationalDatabaseSchemaDialect {
             createTableMap.put(table, createTable);
             toExecute.add(createTable);
             for (Index index : table.getIndexes()) {
-                if (canCreateIndexInTableDefinition(index)) continue;
+                if (canCreateIndexInTableDefinition(index)) {
+                    continue;
+                }
                 SchemaStatement createIndex = new SchemaStatement(createIndex(table, index));
                 createIndex.addDependency(createTable);
                 toExecute.add(createIndex);
@@ -260,9 +305,12 @@ public abstract class RelationalDatabaseSchemaDialect {
     }
 
     private void createSequences(RelationalDatabaseSchema schema, SchemaStatements toExecute) {
-        if (!supportsSequence()) return;
-        for (Sequence s : schema.getSequences())
+        if (!supportsSequence()) {
+            return;
+        }
+        for (Sequence s : schema.getSequences()) {
             toExecute.add(new SchemaStatement(createSequence(s)));
+        }
     }
 
     private void addConstraints(
@@ -300,7 +348,9 @@ public abstract class RelationalDatabaseSchemaDialect {
         Set<Table> foreignTables = new HashSet<>();
         foreignTables.add(table);
         for (Column col : table.getColumns()) {
-            if (col.getForeignKeyReferences() == null) continue;
+            if (col.getForeignKeyReferences() == null) {
+                continue;
+            }
             if (canAddMultipleConstraintsInSingleAlterTable()) {
                 appendForeignKeyConstraint(table, col, sql);
                 foreignTables.add(col.getForeignKeyReferences().getFirst());
@@ -317,17 +367,23 @@ public abstract class RelationalDatabaseSchemaDialect {
         }
         if (canAddMultipleConstraintsInSingleAlterTable() && sql.length() > 0) {
             SchemaStatement alterTable = new SchemaStatement(sql.toString());
-            for (Table foreign : foreignTables)
+            for (Table foreign : foreignTables) {
                 alterTable.addDependency(createTableMap.get(foreign));
-            if (!canDoConcurrentAlterTable()) addAlterTable(latestAlterTable, alterTable);
+            }
+            if (!canDoConcurrentAlterTable()) {
+                addAlterTable(latestAlterTable, alterTable);
+            }
             toExecute.add(alterTable);
         }
         alterTableByTable.put(table, alterTableList);
     }
 
     private void appendForeignKeyConstraint(Table table, Column col, StringBuilder sql) {
-        if (sql.length() > 0) appendForeignKey(table, col, sql);
-        else sql.append(alterTableForeignKey(table, col));
+        if (sql.length() > 0) {
+            appendForeignKey(table, col, sql);
+        } else {
+            sql.append(alterTableForeignKey(table, col));
+        }
     }
 
     private SchemaStatement createAlterTableAddForeignKey(
@@ -340,11 +396,17 @@ public abstract class RelationalDatabaseSchemaDialect {
         SchemaStatement alterTable = new SchemaStatement(alterTableForeignKey(table, col));
         alterTable.addDependency(createTableMap.get(table));
         Table foreign = col.getForeignKeyReferences().getFirst();
-        if (foreign != table) alterTable.addDependency(createTableMap.get(foreign));
+        if (foreign != table) {
+            alterTable.addDependency(createTableMap.get(foreign));
+        }
         if (canDoConcurrentAlterTable()) {
-            if (!alterTableList.isEmpty()) alterTable.addDependency(alterTableList.getLast());
+            if (!alterTableList.isEmpty()) {
+                alterTable.addDependency(alterTableList.getLast());
+            }
             alterTableList.addLast(alterTable);
-            if (foreign != table) foreignTable.put(alterTable, table);
+            if (foreign != table) {
+                foreignTable.put(alterTable, table);
+            }
         } else {
             addAlterTable(latestAlterTable, alterTable);
         }
@@ -369,12 +431,17 @@ public abstract class RelationalDatabaseSchemaDialect {
         sql.append(" (");
         boolean first = true;
         for (Column col : table.getColumns()) {
-            if (first) first = false;
-            else sql.append(", ");
+            if (first) {
+                first = false;
+            } else {
+                sql.append(", ");
+            }
             addColumnDefinition(col, sql);
         }
         for (Index index : table.getIndexes()) {
-            if (!canCreateIndexInTableDefinition(index)) continue;
+            if (!canCreateIndexInTableDefinition(index)) {
+                continue;
+            }
             sql.append(", ");
             addIndexDefinitionInTable(table, index, sql);
         }
@@ -385,7 +452,9 @@ public abstract class RelationalDatabaseSchemaDialect {
     public String createIndex(Table table, Index index) {
         StringBuilder sql = new StringBuilder();
         sql.append("CREATE ");
-        if (index.isUnique()) sql.append("UNIQUE ");
+        if (index.isUnique()) {
+            sql.append("UNIQUE ");
+        }
         sql.append("INDEX ");
         sql.append(index.getName());
         sql.append(" ON ");
@@ -393,8 +462,11 @@ public abstract class RelationalDatabaseSchemaDialect {
         sql.append('(');
         boolean first = true;
         for (String col : index.getColumns()) {
-            if (first) first = false;
-            else sql.append(',');
+            if (first) {
+                first = false;
+            } else {
+                sql.append(',');
+            }
             sql.append(col);
         }
         sql.append(')');
@@ -405,10 +477,18 @@ public abstract class RelationalDatabaseSchemaDialect {
         sql.append(col.getName());
         sql.append(' ');
         sql.append(col.getType());
-        if (col.isRandomUuid() && supportsUuidGeneration()) addDefaultRandomUuid(col, sql);
-        if (!col.isNullable()) addNotNull(col, sql);
-        if (col.isAutoIncrement()) addAutoIncrement(col, sql);
-        if (col.isPrimaryKey()) addPrimaryKey(col, sql);
+        if (col.isRandomUuid() && supportsUuidGeneration()) {
+            addDefaultRandomUuid(col, sql);
+        }
+        if (!col.isNullable()) {
+            addNotNull(col, sql);
+        }
+        if (col.isAutoIncrement()) {
+            addAutoIncrement(col, sql);
+        }
+        if (col.isPrimaryKey()) {
+            addPrimaryKey(col, sql);
+        }
     }
 
     protected void addIndexDefinitionInTable(Table table, Index index, StringBuilder sql) {

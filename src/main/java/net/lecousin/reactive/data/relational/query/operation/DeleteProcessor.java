@@ -41,13 +41,17 @@ class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRe
 
     private static boolean hasOtherLinks(Operation op, Class<?> entityType, String otherThanField) {
         for (ForeignTableInfo fti : LcEntityTypeInfo.get(entityType).getForeignTables()) {
-            if (!fti.getField().getName().equals(otherThanField)) return true;
+            if (!fti.getField().getName().equals(otherThanField)) {
+                return true;
+            }
         }
         RelationalPersistentEntity<?> entity =
                 op.lcClient.getMappingContext().getRequiredPersistentEntity(entityType);
         for (RelationalPersistentProperty prop : entity) {
             if (!prop.getName().equals(otherThanField)
-                    && prop.isAnnotationPresent(ForeignKey.class)) return true;
+                    && prop.isAnnotationPresent(ForeignKey.class)) {
+                return true;
+            }
         }
         return false;
     }
@@ -99,7 +103,9 @@ class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRe
             DeleteRequest request,
             SqlQuery<Delete> query) {
         Object value = request.accessor.getProperty(property);
-        if (value == null) return Conditions.isNull(Column.create(property.getColumnName(), table));
+        if (value == null) {
+            return Conditions.isNull(Column.create(property.getColumnName(), table));
+        }
         if (property.isAnnotationPresent(ForeignKey.class)) {
             // get the id instead of the entity
             value = request.getSavedForeignKeyValue(property.getName());
@@ -116,8 +122,9 @@ class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRe
             request.state.deleted();
             // set id to null
             RelationalPersistentProperty idProperty = entityType.getIdProperty();
-            if (idProperty != null && !idProperty.getType().isPrimitive())
+            if (idProperty != null && !idProperty.getType().isPrimitive()) {
                 entityType.getPropertyAccessor(request.instance).setProperty(idProperty, null);
+            }
         }
     }
 
@@ -132,15 +139,21 @@ class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRe
 
     @Override
     protected boolean doProcess(Operation op, DeleteRequest request) {
-        if (!request.state.isPersisted()) return false;
+        if (!request.state.isPersisted()) {
+            return false;
+        }
         // check entities having a foreign key, but where we don't have a foreign table link
         for (RelationalPersistentEntity<?> entity :
                 op.lcClient.getMappingContext().getPersistentEntities()) {
-            if (entity.equals(request.entityType)) continue;
+            if (entity.equals(request.entityType)) {
+                continue;
+            }
 
             for (RelationalPersistentProperty fkProperty :
                     entity.getPersistentProperties(ForeignKey.class)) {
-                if (!fkProperty.getType().equals(request.entityType.getType())) continue;
+                if (!fkProperty.getType().equals(request.entityType.getType())) {
+                    continue;
+                }
 
                 Field ftField =
                         LcEntityTypeInfo.get(request.entityType.getType())
@@ -224,7 +237,9 @@ class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRe
 
     private void deleteForeignKeyInstance(
             Operation op, DeleteRequest request, Object foreignInstance) {
-        if (foreignInstance == null) return;
+        if (foreignInstance == null) {
+            return;
+        }
         DeleteRequest deleteForeign = addToProcess(op, foreignInstance, null, null, null);
         deleteForeign.dependsOn(request);
     }
@@ -261,10 +276,13 @@ class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRe
                 && !request.state.isFieldModified(foreignTableInfo.getField().getName())) {
             // foreign loaded
             Object foreignInstance = foreignFieldValue.getValue();
-            if (foreignInstance == null) return; // no link
+            if (foreignInstance == null) {
+                return; // no link
+            }
             if (foreignTableInfo.isCollection()) {
-                for (Object o : ModelUtils.getAsCollection(foreignFieldValue.getValue()))
+                for (Object o : ModelUtils.getAsCollection(foreignFieldValue.getValue())) {
                     request.dependsOn(addToProcess(op, (T) o, foreignEntity, null, null));
+                }
             } else {
                 request.dependsOn(
                         addToProcess(
@@ -301,9 +319,10 @@ class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRe
                 entityType.hasIdProperty()
                         ? createCriteriaOnIds(entityType, requests, delete, table)
                         : createCriteriaOnProperties(entityType, requests, delete, table);
-        if (LcReactiveDataRelationalClient.logger.isDebugEnabled())
-            LcReactiveDataRelationalClient.logger.debug(
+        if (LcReactiveDataRelationalClient.log.isDebugEnabled()) {
+            LcReactiveDataRelationalClient.log.debug(
                     "Delete " + entityType.getType().getName() + " where " + criteria);
+        }
         delete.setQuery(StatementBuilder.delete().from(table).where(criteria).build());
         return delete.execute()
                 .then()

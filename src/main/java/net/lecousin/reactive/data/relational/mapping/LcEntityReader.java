@@ -81,8 +81,9 @@ public class LcEntityReader {
     }
 
     public <T> T read(RelationalPersistentEntity<T> entityType, PropertiesSource source) {
-        if (logger.isDebugEnabled())
+        if (logger.isDebugEnabled()) {
             logger.debug("Read <" + source.getSource() + "> into " + entityType.getName());
+        }
 
         T result = getOrCreateInstance(entityType, source);
         EntityState state = EntityState.get(result, client, entityType);
@@ -94,7 +95,9 @@ public class LcEntityReader {
 
             for (RelationalPersistentProperty property : entityType) {
 
-                if (entityType.isConstructorArgument(property)) continue;
+                if (entityType.isConstructorArgument(property)) {
+                    continue;
+                }
 
                 Object value = readProperty(property, source, result);
 
@@ -114,14 +117,18 @@ public class LcEntityReader {
             return readEntityProperty(property, instance, source);
         }
 
-        if (!source.isPropertyPresent(property)) return null;
+        if (!source.isPropertyPresent(property)) {
+            return null;
+        }
 
         Object value = source.getPropertyValue(property);
         return readValue(value, property.getTypeInformation());
     }
 
     public Object readValue(@Nullable Object value, TypeInformation<?> type) {
-        if (null == value) return null;
+        if (null == value) {
+            return null;
+        }
 
         value = client.getSchemaDialect().convertFromDataBase(value, type.getType());
 
@@ -146,14 +153,17 @@ public class LcEntityReader {
     @Nullable
     protected Object getPotentiallyConvertedSimpleRead(
             @Nullable Object value, @Nullable Class<?> target) {
-        if (value == null || target == null || ClassUtils.isAssignableValue(target, value))
+        if (value == null || target == null || ClassUtils.isAssignableValue(target, value)) {
             return value;
+        }
 
-        if (conversions.hasCustomReadTarget(value.getClass(), target))
+        if (conversions.hasCustomReadTarget(value.getClass(), target)) {
             return conversionService.convert(value, target);
+        }
 
-        if (Enum.class.isAssignableFrom(target))
+        if (Enum.class.isAssignableFrom(target)) {
             return Enum.valueOf((Class<Enum>) target, value.toString());
+        }
 
         return conversionService.convert(value, target);
     }
@@ -166,8 +176,9 @@ public class LcEntityReader {
                         client.getMappingContext()
                                 .getRequiredPersistentEntity(property.getActualType());
 
-        if (property.isAnnotationPresent(ForeignKey.class))
+        if (property.isAnnotationPresent(ForeignKey.class)) {
             return readForeignKeyEntity(property, parentInstance, entityType, source);
+        }
 
         // should we support embedded object ?
         throw new MappingException(
@@ -179,10 +190,14 @@ public class LcEntityReader {
             Object parentInstance,
             RelationalPersistentEntity<T> entityType,
             PropertiesSource source) {
-        if (!source.isPropertyPresent(property)) return null;
+        if (!source.isPropertyPresent(property)) {
+            return null;
+        }
 
         Object value = source.getPropertyValue(property);
-        if (value == null) return null; // foreign key is null
+        if (value == null) {
+            return null; // foreign key is null
+        }
         T instance = getOrCreateInstance(entityType, source, value);
         EntityState state = EntityState.get(instance, client, entityType);
         if (!state.isLoaded()) {
@@ -190,7 +205,9 @@ public class LcEntityReader {
                     instance, entityType.getRequiredIdProperty().getField(), value, true);
         }
         ModelUtils.setReverseLink(instance, parentInstance, property);
-        if (!state.isLoaded()) state.lazyLoaded();
+        if (!state.isLoaded()) {
+            state.lazyLoaded();
+        }
         return instance;
     }
 
@@ -212,7 +229,9 @@ public class LcEntityReader {
             RelationalPersistentEntity<T> entityType, PropertiesSource source, Object id) {
         if (id != null) {
             T instance = cache.getById(entityType.getType(), id);
-            if (instance != null) return instance;
+            if (instance != null) {
+                return instance;
+            }
         }
 
         PropertiesSourceParameterValueProvider parameterValueProvider =
@@ -221,7 +240,9 @@ public class LcEntityReader {
                 client.getMapper()
                         .createInstance(entityType, parameterValueProvider::getParameterValue);
 
-        if (id != null) cache.setById(entityType.getType(), id, instance);
+        if (id != null) {
+            cache.setById(entityType.getType(), id, instance);
+        }
 
         return instance;
     }
@@ -254,9 +275,13 @@ public class LcEntityReader {
             RelationalPersistentProperty property =
                     entityType.getRequiredPersistentProperty(paramName);
 
-            if (!source.isPropertyPresent(property)) return null;
+            if (!source.isPropertyPresent(property)) {
+                return null;
+            }
             Object value = source.getPropertyValue(property);
-            if (value == null) return null;
+            if (value == null) {
+                return null;
+            }
 
             Class<T> type = parameter.getType().getType();
 

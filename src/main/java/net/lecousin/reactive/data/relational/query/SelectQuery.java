@@ -54,9 +54,10 @@ public class SelectQuery<T> {
      */
     public SelectQuery<T> join(String entityName, String propertyName, String alias) {
         TableReference source = tableAliases.get(entityName);
-        if (source == null)
+        if (source == null) {
             throw new IllegalArgumentException(
                     "entity <" + entityName + "> does not exist in current select query");
+        }
         TableReference table = new TableReference(source, propertyName, null, alias);
         joins.add(table);
         tableAliases.put(table.alias, table);
@@ -68,8 +69,11 @@ public class SelectQuery<T> {
      * between the existing criteria and the new criteria.
      */
     public SelectQuery<T> where(Criteria criteria) {
-        if (where == null) where = criteria;
-        else where = where.and(criteria);
+        if (where == null) {
+            where = criteria;
+        } else {
+            where = where.and(criteria);
+        }
         return this;
     }
 
@@ -116,7 +120,9 @@ public class SelectQuery<T> {
     void setJoinsTargetType(LcMappingR2dbcConverter mapper) {
         for (int i = 0; i < joins.size(); ++i) {
             TableReference join = joins.get(i);
-            if (join.targetType != null) continue;
+            if (join.targetType != null) {
+                continue;
+            }
             RelationalPersistentEntity<?> joinSourceEntity = mapper.getMappingContext().getRequiredPersistentEntity(join.source.targetType);
             RelationalPersistentProperty property =
                     joinSourceEntity.getPersistentProperty(join.propertyName);
@@ -127,8 +133,11 @@ public class SelectQuery<T> {
             LcEntityTypeInfo sourceInfo = LcEntityTypeInfo.get(join.source.targetType);
             ForeignTableInfo ft = sourceInfo.getForeignTableWithFieldForProperty(join.propertyName);
             if (ft != null) {
-                if (ft.isCollection()) join.targetType = ft.getCollectionElementType();
-                else join.targetType = ft.getField().getType();
+                if (ft.isCollection()) {
+                    join.targetType = ft.getCollectionElementType();
+                } else {
+                    join.targetType = ft.getField().getType();
+                }
                 continue;
             }
             JoinTableInfo joinInfo = sourceInfo.getJoinTable(join.propertyName);
@@ -164,18 +173,25 @@ public class SelectQuery<T> {
                 .append(from.alias);
         for (TableReference join : joins) {
             s.append(" JOIN ");
-            if (join.targetType != null) s.append(join.targetType.getSimpleName()).append(" AS ");
+            if (join.targetType != null) {
+                s.append(join.targetType.getSimpleName()).append(" AS ");
+            }
             s.append(join.alias);
         }
-        if (where != null) s.append(" WHERE ").append(where);
-        if (limit > 0) s.append(" LIMIT ").append(offset).append(',').append(limit);
+        if (where != null) {
+            s.append(" WHERE ").append(where);
+        }
+        if (limit > 0) {
+            s.append(" LIMIT ").append(offset).append(',').append(limit);
+        }
         if (!orderBy.isEmpty()) {
             s.append(" ORDER BY ");
-            for (Tuple3<String, String, Boolean> o : orderBy)
+            for (Tuple3<String, String, Boolean> o : orderBy) {
                 s.append(o.getT1())
                         .append('.')
                         .append(o.getT2())
                         .append(o.getT3() ? " ASC" : " DESC");
+            }
         }
         return s.toString();
     }

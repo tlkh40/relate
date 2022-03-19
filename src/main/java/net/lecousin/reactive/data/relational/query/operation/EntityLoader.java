@@ -39,8 +39,11 @@ class EntityLoader {
         try {
             List<Consumer<Object>> consumers =
                     consumersMap.get(ModelUtils.getDatabaseValue(entity, property, op.lcClient));
-            if (consumers != null)
-                for (Consumer<Object> c : consumers) op.toCall(() -> c.accept(entity));
+            if (consumers != null) {
+                for (Consumer<Object> c : consumers) {
+                    op.toCall(() -> c.accept(entity));
+                }
+            }
             return entity;
         } catch (Exception e) {
             throw new MappingException("Error analyzing data from retrieved entity", e);
@@ -73,8 +76,9 @@ class EntityLoader {
                             .doOnNext(
                                     loaded -> {
                                         for (Consumer<Object> consumer :
-                                                entity.getValue().get(loaded))
+                                                entity.getValue().get(loaded)) {
                                             op.toCall(() -> consumer.accept(loaded));
+                                        }
                                     })
                             .then());
         }

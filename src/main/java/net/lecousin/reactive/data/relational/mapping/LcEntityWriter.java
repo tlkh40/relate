@@ -57,7 +57,9 @@ public class LcEntityWriter {
             PersistentPropertyAccessor<?> accessor) {
 
         for (RelationalPersistentProperty property : entity) {
-            if (!property.isWritable()) continue;
+            if (!property.isWritable()) {
+                continue;
+            }
 
             writeProperty(sink, property, accessor);
         }
@@ -113,12 +115,20 @@ public class LcEntityWriter {
 
     protected Class<?> getPotentiallyConvertedSimpleNullType(Class<?> type) {
         Optional<Class<?>> customTarget = conversions.getCustomWriteTarget(type);
-        if (customTarget.isPresent()) return customTarget.get();
+        if (customTarget.isPresent()) {
+            return customTarget.get();
+        }
 
-        if (type.isEnum()) return String.class;
+        if (type.isEnum()) {
+            return String.class;
+        }
 
-        if (Character.class.equals(type)) return Long.class;
-        if (char[].class.equals(type)) return String.class;
+        if (Character.class.equals(type)) {
+            return Long.class;
+        }
+        if (char[].class.equals(type)) {
+            return String.class;
+        }
 
         return type;
     }
@@ -153,17 +163,24 @@ public class LcEntityWriter {
      */
     @Nullable
     protected Object getPotentiallyConvertedSimpleWrite(@Nullable Object value, Class<?> typeHint) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
 
         if (Object.class != typeHint && conversionService.canConvert(value.getClass(), typeHint)) {
             value = conversionService.convert(value, typeHint);
-            if (value == null) return null;
+            if (value == null) {
+                return null;
+            }
         }
 
         if (value instanceof Number) {
-            if (value instanceof Double || value instanceof Float)
+            if (value instanceof Double || value instanceof Float) {
                 return ((Number) value).doubleValue();
-            if (!(value instanceof BigDecimal)) return ((Number) value).longValue();
+            }
+            if (!(value instanceof BigDecimal)) {
+                return ((Number) value).longValue();
+            }
         } else if (value instanceof Character) {
             return Long.valueOf((Character) value);
         } else if (char[].class.equals(value.getClass())) {
@@ -172,9 +189,13 @@ public class LcEntityWriter {
 
         Optional<Class<?>> customTarget = conversions.getCustomWriteTarget(value.getClass());
 
-        if (customTarget.isPresent()) return conversionService.convert(value, customTarget.get());
+        if (customTarget.isPresent()) {
+            return conversionService.convert(value, customTarget.get());
+        }
 
-        if (Enum.class.isAssignableFrom(value.getClass())) return ((Enum<?>) value).name();
+        if (Enum.class.isAssignableFrom(value.getClass())) {
+            return ((Enum<?>) value).name();
+        }
 
         return value;
     }

@@ -66,35 +66,43 @@ public class SqlQuery<T> {
         PreparedOperation<T> operation =
                 new PreparedOperation<T>() {
                     @Override
-                    public @NonNull T getSource() {
+                    public @NonNull
+                    T getSource() {
                         return query;
                     }
 
                     @Override
                     public void bindTo(@NonNull BindTarget target) {
-                        for (Pair<BindMarker, Object> binding : bindings)
+                        for (Pair<BindMarker, Object> binding : bindings) {
                             binding.getFirst().bind(target, binding.getSecond());
+                        }
                     }
 
                     @Override
-                    public @NonNull String toQuery() {
+                    public @NonNull
+                    String toQuery() {
                         Assert.notNull(query, "Query must be set");
                         RenderContext renderContext =
                                 client.getDataAccess().getStatementMapper().getRenderContext();
-                        if (query instanceof InsertMultiple)
+                        if (query instanceof InsertMultiple) {
                             return finalizeQuery(((InsertMultiple) query).render(renderContext));
+                        }
                         SqlRenderer renderer =
                                 renderContext != null
                                         ? SqlRenderer.create(renderContext)
                                         : SqlRenderer.create();
-                        if (query instanceof Select)
+                        if (query instanceof Select) {
                             return finalizeQuery(renderer.render((Select) query));
-                        if (query instanceof Insert)
+                        }
+                        if (query instanceof Insert) {
                             return finalizeQuery(renderer.render((Insert) query));
-                        if (query instanceof Update)
+                        }
+                        if (query instanceof Update) {
                             return finalizeQuery(renderer.render((Update) query));
-                        if (query instanceof Delete)
+                        }
+                        if (query instanceof Delete) {
                             return finalizeQuery(renderer.render((Delete) query));
+                        }
                         throw new IllegalArgumentException(
                                 "Unexpected query type: " + query.getClass().getName());
                     }

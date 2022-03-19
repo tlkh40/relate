@@ -62,7 +62,9 @@ public class CriteriaSqlBuilder implements CriteriaVisitor<Condition> {
         if (op.getValue() instanceof Collection) {
             Collection<?> value = (Collection<?>) op.getValue();
             List<Expression> expressions = new ArrayList<>(value.size());
-            for (Object v : value) expressions.add(toExpression(v, property));
+            for (Object v : value) {
+                expressions.add(toExpression(v, property));
+            }
 
             switch (op.getOperator()) {
                 case IN:
@@ -114,7 +116,9 @@ public class CriteriaSqlBuilder implements CriteriaVisitor<Condition> {
     }
 
     protected Expression toExpression(Object value, RelationalPersistentProperty property) {
-        if (value instanceof PropertyOperand) return toExpression((PropertyOperand) value);
+        if (value instanceof PropertyOperand) {
+            return toExpression((PropertyOperand) value);
+        }
         return query.marker(
                 query.getClient().getSchemaDialect().convertToDataBase(value, property));
     }
@@ -127,8 +131,9 @@ public class CriteriaSqlBuilder implements CriteriaVisitor<Condition> {
                         .getRequiredPersistentProperty(propertyOperand.getPropertyName())
                         .getColumnName(),
                 tablesByAlias.get(propertyOperand.getEntityName()));
-        for (SqlFunction fct : propertyOperand.getFunctionsToApply())
+        for (SqlFunction fct : propertyOperand.getFunctionsToApply()) {
             result = query.getClient().getSchemaDialect().applyFunctionTo(fct, result);
+        }
         return result;
     }
 }

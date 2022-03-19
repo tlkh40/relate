@@ -49,12 +49,15 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
 
     @SuppressWarnings("java:S3776")
     private J getOriginalOrCreate(T target) {
-        for (J join : originalCollection)
+        for (J join : originalCollection) {
             try {
-                if (Objects.equals(targetField.get(join), target)) return join;
+                if (Objects.equals(targetField.get(join), target)) {
+                    return join;
+                }
             } catch (Exception e) {
                 // ignore
             }
+        }
         Collection<J> col =
                 LcEntityTypeInfo.get(target.getClass())
                         .getJoinTableElementsForJoinTableClass(target, joinClass);
@@ -62,7 +65,7 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
             if (col instanceof JoinTableCollectionFromTargetCollection) {
                 col = ((JoinTableCollectionFromTargetCollection<J, ?>) col).originalCollection;
             }
-            for (J join : col)
+            for (J join : col) {
                 try {
                     if (Objects.equals(sourceField.get(join), sourceInstance)) {
                         originalCollection.add(join);
@@ -71,6 +74,7 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
                 } catch (Exception e) {
                     // ignore
                 }
+            }
         }
 
         try {
@@ -101,9 +105,13 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
 
     @Override
     public boolean contains(Object o) {
-        if (o == null || !joinClass.equals(o.getClass())) return false;
+        if (o == null || !joinClass.equals(o.getClass())) {
+            return false;
+        }
         try {
-            if (sourceField.get(o) != sourceInstance) return false;
+            if (sourceField.get(o) != sourceInstance) {
+                return false;
+            }
             return targetCollection.contains(targetField.get(o));
         } catch (Exception e) {
             throw new ModelAccessException("Error accessing field from " + o);
@@ -112,7 +120,11 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        for (Object o : c) if (!contains(o)) return false;
+        for (Object o : c) {
+            if (!contains(o)) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -140,13 +152,16 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
     @SuppressWarnings("unchecked")
     @Override
     public <R> R[] toArray(R[] a) {
-        if (a.length < targetCollection.size())
+        if (a.length < targetCollection.size()) {
             a =
                     (R[])
                             java.lang.reflect.Array.newInstance(
                                     a.getClass().getComponentType(), targetCollection.size());
+        }
         int i = 0;
-        for (J e : this) a[i++] = (R) e;
+        for (J e : this) {
+            a[i++] = (R) e;
+        }
         return a;
     }
 
@@ -155,7 +170,9 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
         try {
             @SuppressWarnings("unchecked")
             T target = (T) targetField.get(e);
-            if (targetCollection.contains(target)) return false;
+            if (targetCollection.contains(target)) {
+                return false;
+            }
             originalCollection.add(e);
             targetCollection.add(target);
             return true;
@@ -167,7 +184,9 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
     @Override
     public boolean addAll(Collection<? extends J> c) {
         boolean result = false;
-        for (J e : c) result |= add(e);
+        for (J e : c) {
+            result |= add(e);
+        }
         return result;
     }
 
@@ -183,7 +202,9 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
     @Override
     public boolean removeAll(Collection<?> c) {
         boolean result = false;
-        for (Object e : c) result |= remove(e);
+        for (Object e : c) {
+            result |= remove(e);
+        }
         return result;
     }
 
@@ -191,13 +212,14 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
     @Override
     public boolean retainAll(Collection<?> c) {
         List<T> list = new ArrayList<>(c.size());
-        for (Object o : c)
+        for (Object o : c) {
             try {
                 list.add((T) targetField.get(o));
             } catch (Exception e) {
                 throw new ModelAccessException(
                         "Error getting " + targetField.getName() + " from " + o, e);
             }
+        }
         return targetCollection.retainAll(list);
     }
 }

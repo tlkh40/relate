@@ -39,19 +39,25 @@ public class PostgreSQLSchemaDialect extends RelationalDatabaseSchemaDialect {
 
     @Override
     protected String getColumnTypeShort(Column col, Class<?> type, ColumnDefinition def) {
-        if (col.isAutoIncrement()) return "SMALLSERIAL";
+        if (col.isAutoIncrement()) {
+            return "SMALLSERIAL";
+        }
         return "SMALLINT";
     }
 
     @Override
     protected String getColumnTypeInteger(Column col, Class<?> type, ColumnDefinition def) {
-        if (col.isAutoIncrement()) return "SERIAL";
+        if (col.isAutoIncrement()) {
+            return "SERIAL";
+        }
         return "INTEGER";
     }
 
     @Override
     protected String getColumnTypeLong(Column col, Class<?> type, ColumnDefinition def) {
-        if (col.isAutoIncrement()) return "BIGSERIAL";
+        if (col.isAutoIncrement()) {
+            return "BIGSERIAL";
+        }
         return "BIGINT";
     }
 
@@ -68,7 +74,9 @@ public class PostgreSQLSchemaDialect extends RelationalDatabaseSchemaDialect {
     @Override
     protected String getColumnTypeDateTime(Column col, Class<?> type, ColumnDefinition def) {
         int precision = def != null ? def.precision() : -1;
-        if (precision < 0) precision = DEFAULT_TIME_PRECISION;
+        if (precision < 0) {
+            precision = DEFAULT_TIME_PRECISION;
+        }
         return "TIMESTAMP(" + precision + ")";
     }
 
@@ -76,7 +84,9 @@ public class PostgreSQLSchemaDialect extends RelationalDatabaseSchemaDialect {
     protected String getColumnTypeDateTimeWithTimeZone(
             Column col, Class<?> type, ColumnDefinition def) {
         int precision = def != null ? def.precision() : -1;
-        if (precision < 0) precision = DEFAULT_TIME_PRECISION;
+        if (precision < 0) {
+            precision = DEFAULT_TIME_PRECISION;
+        }
         return "TIMESTAMP(" + precision + ") WITH TIME ZONE";
     }
 

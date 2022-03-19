@@ -17,7 +17,8 @@ public class LcR2dbcRepositoryFactoryBean<T extends Repository<S, ID>, S, ID ext
     }
 
     @Override
-    protected @NonNull RepositoryFactorySupport getFactoryInstance(@NonNull R2dbcEntityOperations operations) {
+    protected @NonNull
+    RepositoryFactorySupport getFactoryInstance(@NonNull R2dbcEntityOperations operations) {
         return new LcR2dbcRepositoryFactory(operations);
     }
 }

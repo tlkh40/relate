@@ -46,31 +46,40 @@ abstract class AbstractInstanceProcessor<R extends AbstractInstanceProcessor.Req
     List<R> getPendingRequests(RelationalPersistentEntity<?> entity, Predicate<R> predicate) {
         List<R> list = new LinkedList<>();
         Map<Object, R> map = requests.get(entity);
-        if (map == null) return list;
+        if (map == null) {
+            return list;
+        }
         for (R request : map.values()) {
             if (request.toProcess
                     && !request.executed
                     && request.state.isPersisted()
                     && request.state.isLoaded()
-                    && predicate.test(request)) list.add(request);
+                    && predicate.test(request)) {
+                list.add(request);
+            }
         }
         return list;
     }
 
     boolean processRequests(Operation op) {
         boolean somethingProcessed = false;
-        for (Map<Object, R> map : new ArrayList<>(requests.values()))
+        for (Map<Object, R> map : new ArrayList<>(requests.values())) {
             for (R request : new ArrayList<>(map.values())) {
                 somethingProcessed |= process(op, request);
             }
+        }
         return somethingProcessed;
     }
 
     private boolean process(Operation op, R request) {
-        if (request.processed || !request.toProcess) return false;
+        if (request.processed || !request.toProcess) {
+            return false;
+        }
         request.processed = true;
 
-        if (!doProcess(op, request)) return false;
+        if (!doProcess(op, request)) {
+            return false;
+        }
 
         processForeignKeys(op, request);
         processForeignTables(op, request);
@@ -151,14 +160,19 @@ abstract class AbstractInstanceProcessor<R extends AbstractInstanceProcessor.Req
             @Nullable RelationalPersistentEntity<T> entity,
             @Nullable EntityState state,
             @Nullable PersistentPropertyAccessor<T> accessor) {
-        if (entity == null)
+        if (entity == null) {
             entity =
                     (RelationalPersistentEntity<T>)
                             op.lcClient
                                     .getMappingContext()
                                     .getRequiredPersistentEntity(instance.getClass());
-        if (accessor == null) accessor = entity.getPropertyAccessor(instance);
-        if (state == null) state = EntityState.get(instance, op.lcClient, entity);
+        }
+        if (accessor == null) {
+            accessor = entity.getPropertyAccessor(instance);
+        }
+        if (state == null) {
+            state = EntityState.get(instance, op.lcClient, entity);
+        }
         instance = op.cache.getOrSet(state, entity, accessor, op.lcClient);
         Map<Object, R> map = requests.computeIfAbsent(entity, e -> new HashMap<>());
         R r = map.get(instance);
@@ -176,17 +190,23 @@ abstract class AbstractInstanceProcessor<R extends AbstractInstanceProcessor.Req
                 requests.entrySet()) {
             List<R> ready = new LinkedList<>();
             for (R request : entity.getValue().values()) {
-                if (canExecuteRequest(request)) ready.add(request);
+                if (canExecuteRequest(request)) {
+                    ready.add(request);
+                }
             }
             if (!ready.isEmpty()) {
                 Mono<Void> execution = doRequests(op, entity.getKey(), ready);
-                if (execution != null)
+                if (execution != null) {
                     executions.add(
                             execution.doOnSuccess(
                                     v -> {
-                                        for (R r : ready) r.executed = true;
+                                        for (R r : ready) {
+                                            r.executed = true;
+                                        }
                                     }));
-                else ready.forEach(r -> r.executed = true);
+                } else {
+                    ready.forEach(r -> r.executed = true);
+                }
             }
         }
         return Operation.executeParallel(executions);
