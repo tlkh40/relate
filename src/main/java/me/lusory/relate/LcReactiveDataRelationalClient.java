@@ -32,7 +32,6 @@ import java.time.Duration;
 import java.util.*;
 
 @Slf4j
-@Component
 public class LcReactiveDataRelationalClient {
     private static final String QUERY_ENTITY_NAME = "entity";
 

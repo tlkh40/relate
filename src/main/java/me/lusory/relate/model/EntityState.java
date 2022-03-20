@@ -49,25 +49,24 @@ public class EntityState {
             LcReactiveDataRelationalClient client,
             @Nullable RelationalPersistentEntity<?> entityType
     ) {
+        final Object byteBuddySubclassedEntity = LcEntityTypeInfo.convertToByteBuddySubclass(entity);
         try {
-            Field fieldInfo = LcEntityTypeInfo.get(entity.getClass()).getStateField();
-            EntityState state = (EntityState) fieldInfo.get(entity);
+            final Field fieldInfo = byteBuddySubclassedEntity.getClass().getDeclaredField("_rlState");
+            EntityState state = (EntityState) fieldInfo.get(byteBuddySubclassedEntity);
             if (state == null) {
                 RelationalPersistentEntity<?> type;
                 if (entityType == null) {
-                    type =
-                            client.getMappingContext()
-                                    .getRequiredPersistentEntity(entity.getClass());
+                    type = client.getMappingContext()
+                                    .getRequiredPersistentEntity(byteBuddySubclassedEntity.getClass());
                 } else {
                     type = entityType;
                 }
                 state = new EntityState(client, type);
-                fieldInfo.set(entity, state);
+                fieldInfo.set(byteBuddySubclassedEntity, state);
             }
             return state;
         } catch (Exception e) {
-            throw new ModelAccessException(
-                    "Unexpected error accessing entity state for " + entity, e);
+            throw new ModelAccessException("Unexpected error accessing entity state for " + byteBuddySubclassedEntity, e);
         }
     }
 

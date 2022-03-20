@@ -19,8 +19,7 @@ import java.util.Collections;
 import java.util.List;
 
 public abstract class LcR2dbcEntityOperationsBuilder {
-
-    protected LcR2dbcEntityTemplate buildEntityOperations(ConnectionFactory connectionFactory) {
+    protected LcR2dbcEntityTemplate buildEntityOperations(ConnectionFactory connectionFactory, List<RelationalDatabaseSchemaDialect> schemaDialects) {
         R2dbcDialect dialect = getDialect(connectionFactory);
         R2dbcCustomConversions customConversions = buildR2dbcCustomConversions(dialect);
         R2dbcMappingContext mappingContext = buildMappingContext();
@@ -30,22 +29,23 @@ public abstract class LcR2dbcEntityOperationsBuilder {
         LcReactiveDataAccessStrategy dataAccessStrategy =
                 new LcReactiveDataAccessStrategy(dialect, converter);
         DatabaseClient client = buildDatabaseClient(connectionFactory, dialect);
+        final RelationalDatabaseSchemaDialect schemaDialect = schemaDialects.stream()
+                .filter(d -> d.isCompatible(dialect))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No compatible schema dialect found"));
         LcReactiveDataRelationalClient lcClient =
                 new LcReactiveDataRelationalClient(
                         client,
                         mappingContext,
-                        getLcDialect(dialect),
+                        schemaDialect,
                         dataAccessStrategy,
-                        converter);
+                        converter
+                );
         return new LcR2dbcEntityTemplate(lcClient);
     }
 
     protected R2dbcDialect getDialect(ConnectionFactory connectionFactory) {
         return DialectResolver.getDialect(connectionFactory);
-    }
-
-    protected RelationalDatabaseSchemaDialect getLcDialect(R2dbcDialect dialect) {
-        return RelationalDatabaseSchemaDialect.getDialect(dialect);
     }
 
     protected R2dbcMappingContext buildMappingContext() {
@@ -67,8 +67,7 @@ public abstract class LcR2dbcEntityOperationsBuilder {
         return StoreConversions.of(dialect.getSimpleTypeHolder(), converters);
     }
 
-    protected DatabaseClient buildDatabaseClient(
-            ConnectionFactory connectionFactory, R2dbcDialect dialect) {
+    protected DatabaseClient buildDatabaseClient(ConnectionFactory connectionFactory, R2dbcDialect dialect) {
         return DatabaseClient.builder() //
                 .connectionFactory(connectionFactory)
                 .bindMarkers(dialect.getBindMarkersFactory())

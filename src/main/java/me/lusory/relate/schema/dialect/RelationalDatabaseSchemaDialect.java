@@ -24,14 +24,6 @@ public abstract class RelationalDatabaseSchemaDialect {
     public static final int DEFAULT_FLOATING_POINT_SCALE = 2;
     public static final int DEFAULT_TIME_PRECISION = 3;
 
-    // TODO: remove ServiceLoader stuff
-    public static RelationalDatabaseSchemaDialect getDialect(R2dbcDialect r2dbcDialect) {
-        return StreamSupport.stream(ServiceLoader.load(RelationalDatabaseSchemaDialect.class).spliterator(), false)
-                .filter(dialect -> dialect.isCompatible(r2dbcDialect))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No dialect implementation found"));
-    }
-
     private static void addAlterTable(MutableObject<SchemaStatement> latestAlterTable, SchemaStatement alterTable) {
         if (latestAlterTable.getValue() != null) {
             alterTable.addDependency(latestAlterTable.getValue());

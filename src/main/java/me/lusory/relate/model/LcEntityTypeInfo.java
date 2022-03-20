@@ -2,11 +2,14 @@ package me.lusory.relate.model;
 
 import me.lusory.relate.annotations.ForeignTable;
 import me.lusory.relate.annotations.JoinTable;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.mapping.MappingException;
 import org.springframework.lang.Nullable;
+import org.springframework.objenesis.ObjenesisHelper;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class LcEntityTypeInfo {
 
@@ -14,15 +17,17 @@ public class LcEntityTypeInfo {
 
     private static final String ATTRIBUTE1 = "entity" + "1";
     private static final String ATTRIBUTE2 = "entity" + "2";
-
-    private final Class<?> type;
-    private final Field stateField;
+    private final List<Class<?>> types = new ArrayList<>();
     private final Map<String, ForeignTableInfo> foreignTables = new HashMap<>();
     private final Map<String, JoinTableInfo> joinTables = new HashMap<>();
 
     @SuppressWarnings({"squid:S3011"})
     private LcEntityTypeInfo(Class<?> clazz) throws ModelException {
-        type = clazz;
+        types.add(clazz);
+        if (clazz.getName().contains("ByteBuddy")) { // subclassed with bytebuddy
+            types.add(clazz.getSuperclass());
+        }
+        Field stateField;
         try {
             stateField = clazz.getDeclaredField("_rlState");
             stateField.setAccessible(true);
@@ -82,7 +87,13 @@ public class LcEntityTypeInfo {
 
     public static void setClasses(Collection<Class<?>> classes) throws ModelException {
         for (Class<?> cl : classes) {
-            cache.put(cl, new LcEntityTypeInfo(cl));
+            final LcEntityTypeInfo info = new LcEntityTypeInfo(cl);
+            // TODO: maybe think this out better
+            if (cl.getName().contains("ByteBuddy")) { // subclassed with bytebuddy
+                cache.put(cl.getSuperclass(), info);
+            } else {
+                cache.put(cl, info);
+            }
         }
     }
 
@@ -123,10 +134,6 @@ public class LcEntityTypeInfo {
             }
         }
         return false;
-    }
-
-    public Field getStateField() {
-        return stateField;
     }
 
     /**
@@ -187,7 +194,7 @@ public class LcEntityTypeInfo {
                 + " '"
                 + expectedOn
                 + "' in class '"
-                + type.getSimpleName()
+                + types.stream().map(Class::getSimpleName).collect(Collectors.joining(","))
                 + "'";
     }
 
@@ -317,6 +324,22 @@ public class LcEntityTypeInfo {
             }
         }
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T convertToByteBuddySubclass(T instance) {
+        final LcEntityTypeInfo lookup = LcEntityTypeInfo.get(instance.getClass());
+        if (lookup.types.size() > 1) {
+            final T newInstance = ObjenesisHelper.newInstance(
+                    (Class<T>) lookup.types.stream()
+                            .filter(clazz -> !clazz.equals(instance.getClass()))
+                            .findFirst()
+                            .orElseThrow(IllegalStateException::new)
+            );
+            BeanUtils.copyProperties(instance, newInstance);
+            return newInstance;
+        }
+        return instance;
     }
 
     public static class ForeignTableInfo {

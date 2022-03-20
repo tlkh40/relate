@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.r2dbc.config.AbstractR2dbcConfiguration;
 import org.springframework.data.r2dbc.convert.MappingR2dbcConverter;
@@ -40,25 +41,12 @@ public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2db
     @Nullable
     protected ApplicationContext context;
 
+    private LcReactiveDataRelationalClient lcClient;
 
     @Override
     public void setApplicationContext(@NonNull ApplicationContext applicationContext) {
         this.context = applicationContext;
         super.setApplicationContext(applicationContext);
-    }
-
-    @SuppressWarnings("unchecked")
-    public LcReactiveDataRelationalClient getLcClient(DatabaseClient databaseClient, ReactiveDataAccessStrategy dataAccessStrategy) {
-        return new LcReactiveDataRelationalClient(
-                databaseClient,
-                (MappingContext<
-                        RelationalPersistentEntity<?>,
-                        ? extends RelationalPersistentProperty>)
-                        dataAccessStrategy.getConverter().getMappingContext(),
-                schemaDialect,
-                (LcReactiveDataAccessStrategy) dataAccessStrategy,
-                (LcMappingR2dbcConverter) dataAccessStrategy.getConverter()
-        );
     }
 
     @Bean
@@ -76,12 +64,29 @@ public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2db
     }
 
     @Bean
+    @DependsOn("r2dbcEntityTemplate")
+    public LcReactiveDataRelationalClient lcClient() {
+        return lcClient;
+    }
+
+    @Bean
     @Override
+    @SuppressWarnings("unchecked")
     public @NonNull R2dbcEntityTemplate r2dbcEntityTemplate(
             @NonNull DatabaseClient databaseClient,
             @NonNull ReactiveDataAccessStrategy dataAccessStrategy
     ) {
-        return new LcR2dbcEntityTemplate(getLcClient(databaseClient, dataAccessStrategy));
+        lcClient = new LcReactiveDataRelationalClient(
+                databaseClient,
+                (MappingContext<
+                        RelationalPersistentEntity<?>,
+                        ? extends RelationalPersistentProperty>)
+                        dataAccessStrategy.getConverter().getMappingContext(),
+                schemaDialect,
+                (LcReactiveDataAccessStrategy) dataAccessStrategy,
+                (LcMappingR2dbcConverter) dataAccessStrategy.getConverter()
+        );
+        return new LcR2dbcEntityTemplate(lcClient);
     }
 
     @Override

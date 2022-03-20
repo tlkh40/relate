@@ -161,8 +161,7 @@ class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRe
                                         fkProperty.getName(), entity.getType());
                 if (ftField == null) {
                     ForeignKey fkAnnotation = fkProperty.getRequiredAnnotation(ForeignKey.class);
-                    processForeignTableField(
-                            op, request, null, null, entity, fkProperty, fkAnnotation);
+                    processForeignTableField(op, request, null, null, entity, fkProperty, fkAnnotation);
                 }
             }
         }

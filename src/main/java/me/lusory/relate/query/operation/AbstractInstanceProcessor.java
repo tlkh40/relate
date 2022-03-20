@@ -123,8 +123,7 @@ abstract class AbstractInstanceProcessor<R extends AbstractInstanceProcessor.Req
                 throw new ModelAccessException("Unable to get foreign table field", e);
             }
 
-            processForeignTableField(
-                    op, request, fti, foreignFieldValue, foreignEntity, fkProperty, fk);
+            processForeignTableField(op, request, fti, foreignFieldValue, foreignEntity, fkProperty, fk);
         }
     }
 
@@ -141,7 +140,8 @@ abstract class AbstractInstanceProcessor<R extends AbstractInstanceProcessor.Req
             R request,
             RelationalPersistentProperty fkProperty,
             ForeignKey fkAnnotation,
-            @Nullable ForeignTableInfo foreignTableInfo);
+            @Nullable ForeignTableInfo foreignTableInfo
+    );
 
     @SuppressWarnings("java:S107")
     protected abstract <T> void processForeignTableField(

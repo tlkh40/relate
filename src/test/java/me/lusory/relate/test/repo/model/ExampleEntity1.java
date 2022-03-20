@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import me.lusory.relate.annotations.ForeignKey;
+import me.lusory.relate.annotations.ForeignTable;
 import me.lusory.relate.annotations.GeneratedValue;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
@@ -19,7 +20,4 @@ public class ExampleEntity1 {
     @GeneratedValue
     private long id;
     private String test;
-
-    @ForeignKey
-    private ExampleEntity2 other;
 }

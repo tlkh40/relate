@@ -11,9 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 
 @SpringBootTest(properties = {
-        "spring.r2dbc.url=r2dbc:h2:mem:///testdb",
-        "spring.r2dbc.username=sa",
-        "spring.r2dbc.password="
+        "spring.r2dbc.url=r2dbc:h2:mem:///testdb;DB_CLOSE_DELAY=-1;",
+        "spring.r2dbc.username=sa"
 })
 @SpringBootApplication(scanBasePackages = "me.lusory.relate.test")
 @EnableR2dbcRepositories(repositoryFactoryBeanClass = LcR2dbcRepositoryFactoryBean.class)
@@ -26,8 +25,7 @@ public class OneToOneTest {
         exampleEntityRepository.save(
                 ExampleEntity1.builder()
                         .test("test")
-                        .other(new ExampleEntity2("test1"))
                         .build()
-        ).subscribe();
+        ).doOnNext(System.out::println).block();
     }
 }
