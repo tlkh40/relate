@@ -1,7 +1,5 @@
 package me.lusory.relate.model;
 
-import me.lusory.relate.enhance.Enhancer;
-
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -32,11 +30,11 @@ public class JoinTableCollectionFromTargetCollection<J, T> implements Collection
             joinClass = (Class<J>) getClass().getClassLoader().loadClass(joinClassName);
             sourceField =
                     joinClass.getDeclaredField(
-                            Enhancer.JOIN_TABLE_ATTRIBUTE_PREFIX + sourceAttributeLinkNumber);
+                            "entity" + sourceAttributeLinkNumber);
             sourceField.setAccessible(true);
             targetField =
                     joinClass.getDeclaredField(
-                            Enhancer.JOIN_TABLE_ATTRIBUTE_PREFIX
+                            "entity"
                                     + (sourceAttributeLinkNumber == 1 ? 2 : 1));
             targetField.setAccessible(true);
         } catch (Exception e) {

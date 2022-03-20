@@ -2,7 +2,6 @@ package me.lusory.relate.model;
 
 import me.lusory.relate.annotations.ForeignTable;
 import me.lusory.relate.annotations.JoinTable;
-import me.lusory.relate.enhance.Enhancer;
 import org.springframework.data.mapping.MappingException;
 import org.springframework.lang.Nullable;
 
@@ -13,8 +12,8 @@ public class LcEntityTypeInfo {
 
     private static final Map<Class<?>, LcEntityTypeInfo> cache = new HashMap<>();
 
-    private static final String ATTRIBUTE1 = Enhancer.JOIN_TABLE_ATTRIBUTE_PREFIX + "1";
-    private static final String ATTRIBUTE2 = Enhancer.JOIN_TABLE_ATTRIBUTE_PREFIX + "2";
+    private static final String ATTRIBUTE1 = "entity" + "1";
+    private static final String ATTRIBUTE2 = "entity" + "2";
 
     private final Class<?> type;
     private final Field stateField;
@@ -25,7 +24,7 @@ public class LcEntityTypeInfo {
     private LcEntityTypeInfo(Class<?> clazz) throws ModelException {
         type = clazz;
         try {
-            stateField = clazz.getDeclaredField(Enhancer.STATE_FIELD_NAME);
+            stateField = clazz.getDeclaredField("_lcState");
             stateField.setAccessible(true);
         } catch (Exception e) {
             throw new ModelException(

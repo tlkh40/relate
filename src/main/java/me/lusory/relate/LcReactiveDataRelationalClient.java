@@ -79,8 +79,7 @@ public class LcReactiveDataRelationalClient {
      * @return the Spring Data mappign context containing all known entities.
      */
     @SuppressWarnings("java:S1452") // usage of generic wildcard type
-    public MappingContext<RelationalPersistentEntity<?>, ? extends RelationalPersistentProperty>
-    getMappingContext() {
+    public MappingContext<RelationalPersistentEntity<?>, ? extends RelationalPersistentProperty> getMappingContext() {
         return mappingContext;
     }
 

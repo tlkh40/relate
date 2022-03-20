@@ -1,7 +1,6 @@
 package me.lusory.relate.model;
 
 import me.lusory.relate.LcReactiveDataRelationalClient;
-import me.lusory.relate.enhance.Enhancer;
 import me.lusory.relate.query.criteria.Criteria;
 import me.lusory.relate.query.SelectQuery;
 import org.apache.commons.lang3.mutable.MutableObject;
@@ -161,7 +160,7 @@ public class EntityState {
         modifiedFields.clear();
         persistedValues.clear();
         for (Field f : entity.getClass().getDeclaredFields()) {
-            if (Enhancer.STATE_FIELD_NAME.equals(f.getName())
+            if ("_lcState".equals(f.getName())
                     || f.isAnnotationPresent(Transient.class)
                     || f.isAnnotationPresent(Autowired.class)
                     || f.isAnnotationPresent(Value.class)) {
@@ -388,7 +387,7 @@ public class EntityState {
         return lazyGetForeignTableCollectionField(
                 entity,
                 joinFieldName + "_join",
-                Enhancer.JOIN_TABLE_ATTRIBUTE_PREFIX + joinFieldKeyNumber)
+                "entity" + joinFieldKeyNumber)
                 .map(
                         joinEntity -> {
                             try {
@@ -396,7 +395,7 @@ public class EntityState {
                                         joinEntity
                                                 .getClass()
                                                 .getDeclaredField(
-                                                        Enhancer.JOIN_TABLE_ATTRIBUTE_PREFIX
+                                                        "entity"
                                                                 + joinFieldKeyNumber);
                                 f.setAccessible(true);
                                 return (T) f.get(joinEntity);

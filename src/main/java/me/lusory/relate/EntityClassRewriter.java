@@ -1,26 +1,27 @@
 package me.lusory.relate;
 
 import io.github.classgraph.*;
-import javassist.CtField;
 import lombok.Builder;
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.var;
 import me.lusory.relate.annotations.ColumnDefinition;
 import me.lusory.relate.annotations.ForeignKey;
 import me.lusory.relate.annotations.ForeignTable;
 import me.lusory.relate.annotations.JoinTable;
-import me.lusory.relate.model.EntityState;
-import me.lusory.relate.model.ModelException;
+import me.lusory.relate.model.*;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.agent.ByteBuddyAgent;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.annotation.AnnotationDescription;
+import net.bytebuddy.description.annotation.AnnotationList;
 import net.bytebuddy.description.field.FieldDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassReloadingStrategy;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.bind.annotation.*;
 import net.bytebuddy.matcher.ElementMatchers;
-import net.bytebuddy.matcher.LatentMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -30,11 +31,12 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple4;
 import reactor.util.function.Tuples;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,6 +44,9 @@ import java.util.stream.Collectors;
 @Component
 public class EntityClassRewriter implements ApplicationRunner {
     private static final Advice SETTER_METHOD_ADVICE = Advice.to(SetterMethodAdvice.class);
+    private static final MethodDelegation ENTITY_LOADED_METHOD_DELEGATION = MethodDelegation.to(EntityLoadedMethodDelegate.class);
+    private static final MethodDelegation LOAD_ENTITY_METHOD_DELEGATION = MethodDelegation.to(LoadEntityMethodDelegate.class);
+
     private final ByteBuddy byteBuddy = new ByteBuddy();
     private final Map<ClassInfo, Map<String, JoinTableInfo>> joinTableFields = new HashMap<>();
 
@@ -239,14 +244,35 @@ public class EntityClassRewriter implements ApplicationRunner {
             joinClasses.put(joinClassName, classBuilder);
         }
 
+        final Set<Class<?>> builtClasses = new HashSet<>();
         // process the entity classes
         for (final ClassInfo classInfo : entityClasses.values()) {
-            processEntityClassBuilder(byteBuddy.redefine(classInfo.loadClass()), classInfo);
+            builtClasses.add(processEntityClassBuilder(byteBuddy.redefine(classInfo.loadClass())));
         }
         // process the join table class builders
         for (final DynamicType.Builder<Object> builder : joinClasses.values()) {
-            processEntityClassBuilder(builder, null);
+            builtClasses.add(processEntityClassBuilder(builder));
         }
+        // process join table accessors
+        for (final Map.Entry<ClassInfo, Map<String, JoinTableInfo>> classEntry : joinTableFields.entrySet()) {
+            for (final Map.Entry<String, JoinTableInfo> propertyEntry : classEntry.getValue().entrySet()) {
+                builtClasses.add(
+                        byteBuddy.redefine(classEntry.getKey().loadClass())
+                                .method(ElementMatchers.isGetter(propertyEntry.getKey()))
+                                .intercept(MethodDelegation.to(new JoinGetterMethodDelegate(propertyEntry)))
+                                .method(ElementMatchers.isSetter(propertyEntry.getKey()))
+                                .intercept(MethodDelegation.to(new JoinSetterMethodDelegate(propertyEntry)))
+                                .make()
+                                .load(
+                                        Thread.currentThread().getContextClassLoader(),
+                                        ClassReloadingStrategy.fromInstalledAgent()
+                                )
+                                .getLoaded()
+                );
+            }
+        }
+
+        LcEntityTypeInfo.setClasses(builtClasses);
     }
 
     private List<AnnotationDescription> getJoinFieldAnnotations(String columnName) {
@@ -283,42 +309,46 @@ public class EntityClassRewriter implements ApplicationRunner {
         );
     }
 
-    private boolean isPersistent(FieldInfo field) {
-        if (field.hasAnnotation(Transient.class)
-                || field.hasAnnotation(Autowired.class)
-                || field.hasAnnotation(Value.class)) {
+    private boolean isPersistent(FieldDescription field) {
+        final AnnotationList annotations = field.getDeclaredAnnotations();
+        if (annotations.isAnnotationPresent(Transient.class)
+                || annotations.isAnnotationPresent(Autowired.class)
+                || annotations.isAnnotationPresent(Value.class)) {
             return false;
         }
-        return field.hasAnnotation(Id.class)
-                || field.hasAnnotation(Column.class)
-                || field.hasAnnotation(ColumnDefinition.class)
-                || field.hasAnnotation(Version.class)
-                || field.hasAnnotation(ForeignKey.class);
+        return annotations.isAnnotationPresent(Id.class)
+                || annotations.isAnnotationPresent(Column.class)
+                || annotations.isAnnotationPresent(ColumnDefinition.class)
+                || annotations.isAnnotationPresent(Version.class)
+                || annotations.isAnnotationPresent(ForeignKey.class);
     }
 
-    private <T> void processEntityClassBuilder(DynamicType.Builder<T> builder, @Nullable ClassInfo backingClassInfo) {
-        // TODO: persistent fields accessor
-        // TODO: lazy methods
-        // TODO: process join table getter and setter
+    private <T> Class<? extends T> processEntityClassBuilder(DynamicType.Builder<T> builder) {
         // add state attribute
         builder = builder.defineField("_rlState", EntityState.class, Modifier.PUBLIC)
                 .annotateType(AnnotationDescription.Builder.ofType(Transient.class).build());
 
-        if (backingClassInfo != null) {
-            for (final FieldInfo fieldInfo : backingClassInfo.getDeclaredFieldInfo()) {
-                if (!isPersistent(fieldInfo)) {
-                    continue;
-                }
-
-                builder = builder.method(ElementMatchers.isSetter(fieldInfo.getName())) // TODO: perhaps expand this to account for type
-                        .intercept(SETTER_METHOD_ADVICE);
+        for (final FieldDescription fieldDescription : builder.toTypeDescription().getDeclaredFields()) {
+            if (!isPersistent(fieldDescription)) {
+                continue;
             }
+
+            // persistent fields accessor
+            builder = builder.method(ElementMatchers.isSetter(fieldDescription.getName())) // TODO: perhaps expand this to account for type
+                    .intercept(SETTER_METHOD_ADVICE);
         }
 
-        builder.make().load(
-                Thread.currentThread().getContextClassLoader(),
-                ClassReloadingStrategy.fromInstalledAgent()
-        );
+        // lazy methods
+        return builder.method(ElementMatchers.named("entityLoaded").and(ElementMatchers.takesNoArguments()).and(ElementMatchers.returns(boolean.class)))
+                .intercept(ENTITY_LOADED_METHOD_DELEGATION)
+                .defineMethod("loadEntity", Mono.class, Modifier.PUBLIC)
+                .intercept(LOAD_ENTITY_METHOD_DELEGATION)
+                .make()
+                .load(
+                        Thread.currentThread().getContextClassLoader(),
+                        ClassReloadingStrategy.fromInstalledAgent()
+                )
+                .getLoaded();
     }
 
     static class SetterMethodAdvice {
@@ -332,7 +362,78 @@ public class EntityClassRewriter implements ApplicationRunner {
         }
     }
 
-    @Data
+    public static class EntityLoadedMethodDelegate {
+        @RuntimeType
+        public static boolean entityLoaded(@FieldValue("_rlState") EntityState _rlState) {
+            return _rlState != null && _rlState.isLoaded();
+        }
+    }
+
+    public static class LoadEntityMethodDelegate {
+        @RuntimeType
+        public static Mono<?> loadEntity(@This Object instance, @FieldValue("_rlState") EntityState _rlState) {
+            return _rlState.load(instance);
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class JoinGetterMethodDelegate {
+        private final Map.Entry<String, JoinTableInfo> propertyEntry;
+
+        @RuntimeType
+        @SneakyThrows
+        public Object intercept(
+                @FieldValue Object backingField,
+                @This Object instance,
+                @Origin Class<?> instrumentedType
+        ) {
+            if (backingField != null) {
+                return backingField;
+            }
+            final Field joinField = instrumentedType.getDeclaredField(propertyEntry.getKey() + "_join");
+            joinField.setAccessible(true);
+            final Object joinFieldI = joinField.get(instance);
+            if (joinFieldI != null) {
+                final Collection<?> newCollection = new JoinTableCollectionToTargetCollection<>(
+                        instance,
+                        (Collection<?>) joinFieldI,
+                        propertyEntry.getValue().joinClassName,
+                        propertyEntry.getValue().linkNumber
+                );
+                final Field propertyField = instrumentedType.getDeclaredField(propertyEntry.getKey());
+                propertyField.setAccessible(true);
+                propertyField.set(instance, newCollection);
+                return newCollection;
+            }
+            return null;
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class JoinSetterMethodDelegate {
+        private final Map.Entry<String, JoinTableInfo> propertyEntry;
+
+        @SneakyThrows
+        public <T> void intercept(
+                @This Object instance,
+                @Origin Class<?> instrumentedType,
+                @Argument(0) @RuntimeType Collection<T> arg
+        ) {
+            final Field joinField = instrumentedType.getDeclaredField(propertyEntry.getKey() + "_join");
+            joinField.setAccessible(true);
+            joinField.set(
+                    instance,
+                    new JoinTableCollectionFromTargetCollection<>(
+                            instance,
+                            (Collection<?>) joinField.get(instance),
+                            Set.class.isAssignableFrom(arg.getClass()) ? (Set<T>) arg : new HashSet<>(arg),
+                            propertyEntry.getValue().joinClassName,
+                            propertyEntry.getValue().linkNumber
+                    )
+            );
+        }
+    }
+
     @Builder
     private static class JoinTableInfo {
         private String joinClassName;
