@@ -2,7 +2,6 @@ package me.lusory.relate.schema.dialect;
 
 import me.lusory.relate.annotations.ColumnDefinition;
 import me.lusory.relate.schema.*;
-import net.lecousin.reactive.data.relational.schema.*;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.data.r2dbc.dialect.R2dbcDialect;
 import org.springframework.data.relational.core.mapping.RelationalPersistentProperty;
@@ -25,6 +24,7 @@ public abstract class RelationalDatabaseSchemaDialect {
     public static final int DEFAULT_FLOATING_POINT_SCALE = 2;
     public static final int DEFAULT_TIME_PRECISION = 3;
 
+    // TODO: remove ServiceLoader stuff
     public static RelationalDatabaseSchemaDialect getDialect(R2dbcDialect r2dbcDialect) {
         return StreamSupport.stream(ServiceLoader.load(RelationalDatabaseSchemaDialect.class).spliterator(), false)
                 .filter(dialect -> dialect.isCompatible(r2dbcDialect))

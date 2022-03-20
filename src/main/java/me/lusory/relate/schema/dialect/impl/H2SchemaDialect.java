@@ -1,15 +1,19 @@
 package me.lusory.relate.schema.dialect.impl;
 
+import io.r2dbc.h2.H2Connection;
 import me.lusory.relate.annotations.ColumnDefinition;
 import me.lusory.relate.schema.Column;
 import me.lusory.relate.schema.dialect.RelationalDatabaseSchemaDialect;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.data.r2dbc.dialect.H2Dialect;
 import org.springframework.data.r2dbc.dialect.R2dbcDialect;
 import org.springframework.data.relational.core.mapping.RelationalPersistentProperty;
+import org.springframework.stereotype.Component;
 
+@Component
+@ConditionalOnClass(H2Connection.class)
 public class H2SchemaDialect extends RelationalDatabaseSchemaDialect {
-
     @Override
     public String getName() {
         return "H2";

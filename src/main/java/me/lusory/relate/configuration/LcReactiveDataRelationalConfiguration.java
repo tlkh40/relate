@@ -8,6 +8,7 @@ import me.lusory.relate.mapping.LcReactiveDataAccessStrategy;
 import me.lusory.relate.repository.LcR2dbcEntityTemplate;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.r2dbc.config.AbstractR2dbcConfiguration;
@@ -28,8 +29,8 @@ import org.springframework.util.Assert;
  * Configure R2DBC spring data extended by lc-reactive-spring-data-relational.
  */
 @Configuration
+@ComponentScan("me.lusory.relate")
 public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2dbcConfiguration {
-
     private static final String CONNECTION_FACTORY_BEAN_NAME = "connectionFactory";
 
     @Nullable
@@ -83,8 +84,7 @@ public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2db
     }
 
     @Override
-    public @NonNull
-    ConnectionFactory connectionFactory() {
+    public @NonNull ConnectionFactory connectionFactory() {
         //noinspection ConstantConditions
         return null;
     }

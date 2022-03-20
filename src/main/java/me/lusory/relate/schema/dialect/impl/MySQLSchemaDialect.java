@@ -1,19 +1,23 @@
 package me.lusory.relate.schema.dialect.impl;
 
+import dev.miku.r2dbc.mysql.MySqlConnection;
 import me.lusory.relate.annotations.ColumnDefinition;
 import me.lusory.relate.schema.Index;
 import me.lusory.relate.schema.Table;
 import me.lusory.relate.schema.dialect.RelationalDatabaseSchemaDialect;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.data.r2dbc.dialect.MySqlDialect;
 import org.springframework.data.r2dbc.dialect.R2dbcDialect;
 import org.springframework.data.relational.core.mapping.RelationalPersistentProperty;
 import org.springframework.data.relational.core.sql.*;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+@Component
+@ConditionalOnClass(MySqlConnection.class)
 public class MySQLSchemaDialect extends RelationalDatabaseSchemaDialect {
-
     @Override
     public String getName() {
         return "MySQL";

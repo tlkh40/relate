@@ -1,20 +1,24 @@
 package me.lusory.relate.schema.dialect.impl;
 
+import io.r2dbc.postgresql.api.PostgresqlConnection;
 import me.lusory.relate.annotations.ColumnDefinition;
 import me.lusory.relate.schema.Column;
 import me.lusory.relate.schema.dialect.RelationalDatabaseSchemaDialect;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.data.r2dbc.dialect.PostgresDialect;
 import org.springframework.data.r2dbc.dialect.R2dbcDialect;
 import org.springframework.data.relational.core.sql.Expression;
 import org.springframework.data.relational.core.sql.Expressions;
 import org.springframework.data.relational.core.sql.SQL;
 import org.springframework.data.relational.core.sql.SimpleFunction;
+import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Collections;
 
+@Component
+@ConditionalOnClass(PostgresqlConnection.class)
 public class PostgreSQLSchemaDialect extends RelationalDatabaseSchemaDialect {
-
     private static final String EXTRACT_DATE_TIME_FUNCTION = "EXTRACT";
 
     @Override

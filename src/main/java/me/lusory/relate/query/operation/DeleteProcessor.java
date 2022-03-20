@@ -1,12 +1,12 @@
 package me.lusory.relate.query.operation;
 
+import lombok.extern.slf4j.Slf4j;
 import me.lusory.relate.annotations.ForeignKey;
-import me.lusory.relate.model.ModelUtils;
-import me.lusory.relate.LcReactiveDataRelationalClient;
 import me.lusory.relate.model.EntityState;
 import me.lusory.relate.model.LcEntityTypeInfo;
 import me.lusory.relate.model.LcEntityTypeInfo.ForeignTableInfo;
 import me.lusory.relate.model.ModelAccessException;
+import me.lusory.relate.model.ModelUtils;
 import me.lusory.relate.query.SqlQuery;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
@@ -19,8 +19,8 @@ import reactor.core.publisher.Mono;
 import java.lang.reflect.Field;
 import java.util.*;
 
+@Slf4j
 class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRequest> {
-
     private static void removeFromForeignTableCollection(
             DeleteRequest request,
             RelationalPersistentProperty fkProperty,
@@ -319,9 +319,8 @@ class DeleteProcessor extends AbstractInstanceProcessor<DeleteProcessor.DeleteRe
                 entityType.hasIdProperty()
                         ? createCriteriaOnIds(entityType, requests, delete, table)
                         : createCriteriaOnProperties(entityType, requests, delete, table);
-        if (LcReactiveDataRelationalClient.log.isDebugEnabled()) {
-            LcReactiveDataRelationalClient.log.debug(
-                    "Delete " + entityType.getType().getName() + " where " + criteria);
+        if (log.isDebugEnabled()) {
+            log.debug("Delete " + entityType.getType().getName() + " where " + criteria);
         }
         delete.setQuery(StatementBuilder.delete().from(table).where(criteria).build());
         return delete.execute()

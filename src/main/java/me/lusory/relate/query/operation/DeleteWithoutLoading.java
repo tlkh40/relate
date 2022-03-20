@@ -1,6 +1,6 @@
 package me.lusory.relate.query.operation;
 
-import me.lusory.relate.LcReactiveDataRelationalClient;
+import lombok.extern.slf4j.Slf4j;
 import me.lusory.relate.query.SqlQuery;
 import org.springframework.data.relational.core.mapping.RelationalPersistentEntity;
 import org.springframework.data.relational.core.mapping.RelationalPersistentProperty;
@@ -9,8 +9,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.*;
 
+@Slf4j
 class DeleteWithoutLoading extends AbstractProcessor<DeleteWithoutLoading.Request> {
-
     /**
      * Leaf entities that can be deleted without the need to load them.
      */
@@ -38,9 +38,8 @@ class DeleteWithoutLoading extends AbstractProcessor<DeleteWithoutLoading.Reques
             condition = condition != null ? condition.or(c) : c;
         }
 
-        if (LcReactiveDataRelationalClient.log.isDebugEnabled()) {
-            LcReactiveDataRelationalClient.log.debug(
-                    "Delete " + entityType.getType().getName() + " where " + condition);
+        if (log.isDebugEnabled()) {
+            log.debug("Delete " + entityType.getType().getName() + " where " + condition);
         }
         return condition;
     }
