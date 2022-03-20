@@ -17,21 +17,22 @@ import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.annotation.AnnotationList;
 import net.bytebuddy.description.field.FieldDescription;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassReloadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.*;
 import net.bytebuddy.matcher.ElementMatchers;
+import net.bytebuddy.pool.TypePool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.SpringApplicationRunListener;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple4;
 import reactor.util.function.Tuples;
@@ -39,10 +40,10 @@ import reactor.util.function.Tuples;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Component
-public class EntityClassRewriter implements ApplicationRunner {
+public class EntityClassRewriter implements SpringApplicationRunListener {
     private static final Advice SETTER_METHOD_ADVICE = Advice.to(SetterMethodAdvice.class);
     private static final MethodDelegation ENTITY_LOADED_METHOD_DELEGATION = MethodDelegation.to(EntityLoadedMethodDelegate.class);
     private static final MethodDelegation LOAD_ENTITY_METHOD_DELEGATION = MethodDelegation.to(LoadEntityMethodDelegate.class);
@@ -51,16 +52,19 @@ public class EntityClassRewriter implements ApplicationRunner {
     private final Map<ClassInfo, Map<String, JoinTableInfo>> joinTableFields = new HashMap<>();
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
+    @SneakyThrows
+    public void contextPrepared(ConfigurableApplicationContext context) {
         ByteBuddyAgent.install();
 
         final Map<String, DynamicType.Builder<Object>> joinClasses = new HashMap<>();
         Map<String, ClassInfo> entityClasses;
         try (final ScanResult scanResult = new ClassGraph().enableClassInfo().enableFieldInfo().enableMethodInfo().enableAnnotationInfo().scan()) {
             entityClasses = scanResult.getClassesWithAnnotation(Table.class).stream()
-                    .map(classInfo -> new AbstractMap.SimpleImmutableEntry<>(classInfo.getName(), classInfo))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                    .collect(Collectors.toMap(ClassInfo::getName, Function.identity()));
         }
+
+        final ClassFileLocator contextClassFileLocator = ClassFileLocator.ForClassLoader.of(Thread.currentThread().getContextClassLoader());
+        final TypePool contextTypePool = TypePool.Default.of(contextClassFileLocator);
 
         // process join table fields and create join classes
         final LinkedList<Tuple4<ClassInfo, FieldInfo, AnnotationInfo, ClassInfo>> joins = new LinkedList<>(); // variable type needs to be LinkedList
@@ -210,9 +214,9 @@ public class EntityClassRewriter implements ApplicationRunner {
                                     .define("value", tableName)
                                     .build()
                     )
-                    .defineField("entity1", class1.loadClass(), Modifier.PUBLIC)
+                    .defineField("entity1", contextTypePool.describe(class1.getName()).resolve(), Modifier.PUBLIC)
                     .annotateType(getJoinFieldAnnotations(columnName1))
-                    .defineField("entity2", class2.loadClass(), Modifier.PUBLIC)
+                    .defineField("entity2", contextTypePool.describe(class2.getName()).resolve(), Modifier.PUBLIC)
                     .annotateType(getJoinFieldAnnotations(columnName2));
 
             final TypeDescription builderType = classBuilder.toTypeDescription();
@@ -247,7 +251,7 @@ public class EntityClassRewriter implements ApplicationRunner {
         final Set<Class<?>> builtClasses = new HashSet<>();
         // process the entity classes
         for (final ClassInfo classInfo : entityClasses.values()) {
-            builtClasses.add(processEntityClassBuilder(byteBuddy.redefine(classInfo.loadClass())));
+            builtClasses.add(processEntityClassBuilder(byteBuddy.redefine(contextTypePool.describe(classInfo.getName()).resolve(), contextClassFileLocator)));
         }
         // process the join table class builders
         for (final DynamicType.Builder<Object> builder : joinClasses.values()) {
@@ -257,7 +261,7 @@ public class EntityClassRewriter implements ApplicationRunner {
         for (final Map.Entry<ClassInfo, Map<String, JoinTableInfo>> classEntry : joinTableFields.entrySet()) {
             for (final Map.Entry<String, JoinTableInfo> propertyEntry : classEntry.getValue().entrySet()) {
                 builtClasses.add(
-                        byteBuddy.redefine(classEntry.getKey().loadClass())
+                        byteBuddy.redefine(contextTypePool.describe(classEntry.getKey().getName()).resolve(), contextClassFileLocator)
                                 .method(ElementMatchers.isGetter(propertyEntry.getKey()))
                                 .intercept(MethodDelegation.to(new JoinGetterMethodDelegate(propertyEntry)))
                                 .method(ElementMatchers.isSetter(propertyEntry.getKey()))

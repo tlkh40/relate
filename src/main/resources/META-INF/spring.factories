@@ -1,1 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=me.lusory.relate.configuration.LcReactiveDataRelationalConfiguration
+org.springframework.boot.SpringApplicationRunListener=me.lusory.relate.EntityClassRewriter
