@@ -24,4 +24,14 @@ dependencies {
     compileOnly(group = "io.r2dbc", name = "r2dbc-h2", version = DependencyVersions.H2)
     compileOnly(group = "dev.miku", name = "r2dbc-mysql", version = DependencyVersions.MYSQL)
     compileOnly(group = "io.r2dbc", name = "r2dbc-postgresql", version = DependencyVersions.POSTGRESQL)
+
+    // tests
+
+    testImplementation(group = "org.springframework.boot", name = "spring-boot-starter-test", version = DependencyVersions.SPRING_BOOT)
+    testImplementation(group = "org.springframework.boot", name = "spring-boot-starter-data-r2dbc", version = DependencyVersions.SPRING_BOOT)
+    testRuntimeOnly(group = "io.r2dbc", name = "r2dbc-h2", version = DependencyVersions.H2)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

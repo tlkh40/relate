@@ -16,16 +16,17 @@ import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.annotation.AnnotationList;
 import net.bytebuddy.description.field.FieldDescription;
+import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.DynamicType;
-import net.bytebuddy.dynamic.loading.ClassReloadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.*;
 import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.pool.TypePool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringApplicationRunListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.annotation.Id;
@@ -33,11 +34,14 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
+import org.springframework.util.StringUtils;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple4;
 import reactor.util.function.Tuples;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.function.Function;
@@ -49,7 +53,15 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
     private static final MethodDelegation LOAD_ENTITY_METHOD_DELEGATION = MethodDelegation.to(LoadEntityMethodDelegate.class);
 
     private final ByteBuddy byteBuddy = new ByteBuddy();
-    private final Map<ClassInfo, Map<String, JoinTableInfo>> joinTableFields = new HashMap<>();
+    private final Map<String, Map<String, JoinTableInfo>> joinTableFields = new HashMap<>();
+
+    public EntityClassRewriter() {
+        // dummy constructor for testing
+    }
+
+    private EntityClassRewriter(SpringApplication application, String[] args) {
+        // dummy constructor for superinterface
+    }
 
     @Override
     @SneakyThrows
@@ -215,13 +227,13 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
                                     .build()
                     )
                     .defineField("entity1", contextTypePool.describe(class1.getName()).resolve(), Modifier.PUBLIC)
-                    .annotateType(getJoinFieldAnnotations(columnName1))
+                    .annotateField(getJoinFieldAnnotations(columnName1))
                     .defineField("entity2", contextTypePool.describe(class2.getName()).resolve(), Modifier.PUBLIC)
-                    .annotateType(getJoinFieldAnnotations(columnName2));
+                    .annotateField(getJoinFieldAnnotations(columnName2));
 
             final TypeDescription builderType = classBuilder.toTypeDescription();
             if (field1 != null) {
-                joinTableFields.computeIfAbsent(class1, c -> new HashMap<>()).put(
+                joinTableFields.computeIfAbsent(class1.getName(), c -> new HashMap<>()).put(
                         field1.getName(),
                         JoinTableInfo.builder()
                                 .joinClassName(joinClassName)
@@ -233,7 +245,7 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
                 );
             }
             if (field2 != null) {
-                joinTableFields.computeIfAbsent(class2, c -> new HashMap<>()).put(
+                joinTableFields.computeIfAbsent(class2.getName(), c -> new HashMap<>()).put(
                         field2.getName(),
                         JoinTableInfo.builder()
                                 .joinClassName(joinClassName)
@@ -248,7 +260,7 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
             joinClasses.put(joinClassName, classBuilder);
         }
 
-        final Set<Class<?>> builtClasses = new HashSet<>();
+        final Set<DynamicType.Unloaded<?>> builtClasses = new HashSet<>();
         // process the entity classes
         for (final ClassInfo classInfo : entityClasses.values()) {
             builtClasses.add(processEntityClassBuilder(byteBuddy.redefine(contextTypePool.describe(classInfo.getName()).resolve(), contextClassFileLocator)));
@@ -258,20 +270,15 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
             builtClasses.add(processEntityClassBuilder(builder));
         }
         // process join table accessors
-        for (final Map.Entry<ClassInfo, Map<String, JoinTableInfo>> classEntry : joinTableFields.entrySet()) {
+        for (final Map.Entry<String, Map<String, JoinTableInfo>> classEntry : joinTableFields.entrySet()) {
             for (final Map.Entry<String, JoinTableInfo> propertyEntry : classEntry.getValue().entrySet()) {
                 builtClasses.add(
-                        byteBuddy.redefine(contextTypePool.describe(classEntry.getKey().getName()).resolve(), contextClassFileLocator)
+                        byteBuddy.redefine(contextTypePool.describe(classEntry.getKey()).resolve(), contextClassFileLocator)
                                 .method(ElementMatchers.isGetter(propertyEntry.getKey()))
                                 .intercept(MethodDelegation.to(new JoinGetterMethodDelegate(propertyEntry)))
                                 .method(ElementMatchers.isSetter(propertyEntry.getKey()))
                                 .intercept(MethodDelegation.to(new JoinSetterMethodDelegate(propertyEntry)))
                                 .make()
-                                .load(
-                                        Thread.currentThread().getContextClassLoader(),
-                                        ClassReloadingStrategy.fromInstalledAgent()
-                                )
-                                .getLoaded()
                 );
             }
         }
@@ -327,10 +334,10 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
                 || annotations.isAnnotationPresent(ForeignKey.class);
     }
 
-    private <T> Class<? extends T> processEntityClassBuilder(DynamicType.Builder<T> builder) {
+    private <T> DynamicType.Unloaded<T> processEntityClassBuilder(DynamicType.Builder<T> builder) {
         // add state attribute
         builder = builder.defineField("_rlState", EntityState.class, Modifier.PUBLIC)
-                .annotateType(AnnotationDescription.Builder.ofType(Transient.class).build());
+                .annotateField(AnnotationDescription.Builder.ofType(Transient.class).build());
 
         for (final FieldDescription fieldDescription : builder.toTypeDescription().getDeclaredFields()) {
             if (!isPersistent(fieldDescription)) {
@@ -342,22 +349,59 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
                     .intercept(SETTER_METHOD_ADVICE);
         }
 
+        final TypeDescription builderType = builder.toTypeDescription();
+
         // lazy methods
+        for (final MethodDescription methodDescription : builderType.getDeclaredMethods()) {
+            if (methodDescription.getName().startsWith("lazyGet")) {
+                final String propertyName = StringUtils.uncapitalize(methodDescription.getName().substring(7));
+                final FieldDescription field = builderType.getDeclaredFields().stream()
+                        .filter(f -> f.getName().equals(propertyName))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException("Backing field " + propertyName + " for lazy accessor not found"));
+
+                final AnnotationDescription foreignTable = field.getDeclaredAnnotations().ofType(ForeignTable.class);
+                if (foreignTable != null) {
+                    if (field.getType().isArray() || field.getType().asErasure().isAssignableFrom(Collection.class)) {
+                        builder = builder.method(method -> method.equals(methodDescription))
+                                .intercept(MethodDelegation.to(new LazyForeignTableCollectionGetterMethodDelegate(propertyName, foreignTable.getValue("joinKey").resolve(String.class))));
+                    } else {
+                        builder = builder.method(method -> method.equals(methodDescription))
+                                .intercept(MethodDelegation.to(new LazyForeignTableGetterMethodDelegate(propertyName, foreignTable.getValue("joinKey").resolve(String.class))));
+                    }
+                    continue;
+                }
+
+                final AnnotationDescription joinTable = field.getDeclaredAnnotations().ofType(JoinTable.class);
+                if (joinTable != null) {
+                    builder = builder.method(method -> method.equals(methodDescription))
+                            .intercept(MethodDelegation.to(new LazyJoinTableGetterMethodDelegate(propertyName, joinTableFields.get(builderType.getName()).get(propertyName).linkNumber)));
+                    continue;
+                }
+
+                final AnnotationDescription foreignKey = field.getDeclaredAnnotations().ofType(ForeignKey.class);
+                if (foreignKey != null) {
+                    builder = builder.method(method -> method.equals(methodDescription))
+                            .intercept(MethodDelegation.to(new LazyForeignKeyGetterMethodDelegate(propertyName)));
+                } else {
+                    builder = builder.method(method -> method.equals(methodDescription))
+                            .intercept(MethodDelegation.to(new LazyForeignKeyFieldGetterMethodDelegate(propertyName)));
+                }
+            }
+        }
+
         return builder.method(ElementMatchers.named("entityLoaded").and(ElementMatchers.takesNoArguments()).and(ElementMatchers.returns(boolean.class)))
                 .intercept(ENTITY_LOADED_METHOD_DELEGATION)
                 .defineMethod("loadEntity", Mono.class, Modifier.PUBLIC)
                 .intercept(LOAD_ENTITY_METHOD_DELEGATION)
-                .make()
-                .load(
-                        Thread.currentThread().getContextClassLoader(),
-                        ClassReloadingStrategy.fromInstalledAgent()
-                )
-                .getLoaded();
+                .make();
     }
+
+    // advices and method delegates
 
     static class SetterMethodAdvice {
         @Advice.OnMethodEnter
-        static void setter(
+        static void intercept(
                 @Advice.FieldValue(value = "_rlState", readOnly = false) EntityState _rlState,
                 @Advice.Origin(value = "#p") String backingField,
                 @Advice.Argument(0) Object newValue
@@ -368,14 +412,14 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
 
     public static class EntityLoadedMethodDelegate {
         @RuntimeType
-        public static boolean entityLoaded(@FieldValue("_rlState") EntityState _rlState) {
+        public static boolean intercept(@FieldValue("_rlState") EntityState _rlState) {
             return _rlState != null && _rlState.isLoaded();
         }
     }
 
     public static class LoadEntityMethodDelegate {
         @RuntimeType
-        public static Mono<?> loadEntity(@This Object instance, @FieldValue("_rlState") EntityState _rlState) {
+        public static Mono<?> intercept(@This Object instance, @FieldValue("_rlState") EntityState _rlState) {
             return _rlState.load(instance);
         }
     }
@@ -435,6 +479,69 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
                             propertyEntry.getValue().linkNumber
                     )
             );
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class LazyForeignTableCollectionGetterMethodDelegate {
+        private final String propertyName;
+        private final String joinKey;
+
+        @RuntimeType
+        public Flux<?> intercept(@This Object instance, @FieldValue("_rlState") EntityState _rlState) {
+            return _rlState.lazyGetForeignTableCollectionField(instance, propertyName, joinKey);
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class LazyForeignTableGetterMethodDelegate {
+        private final String propertyName;
+        private final String joinKey;
+
+        @RuntimeType
+        public Mono<?> intercept(@This Object instance, @FieldValue("_rlState") EntityState _rlState) {
+            return _rlState.lazyGetForeignTableField(instance, propertyName, joinKey);
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class LazyJoinTableGetterMethodDelegate {
+        private final String propertyName;
+        private final int linkNumber;
+
+        @RuntimeType
+        public Flux<?> intercept(@This Object instance, @FieldValue("_rlState") EntityState _rlState) {
+            return _rlState.lazyGetJoinTableField(instance, propertyName, linkNumber);
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class LazyForeignKeyGetterMethodDelegate {
+        private final String propertyName;
+
+        @RuntimeType
+        @SneakyThrows
+        public Mono<?> intercept(@This Object instance, @Origin Class<?> instrumentedType) {
+            // if ForeignKey, ensure it is loaded
+            Method foreignKeyGetter;
+            try {
+                foreignKeyGetter = instrumentedType.getDeclaredMethod("get" + StringUtils.capitalize(propertyName));
+            } catch (NoSuchMethodException ignored) {
+                foreignKeyGetter = instrumentedType.getDeclaredMethod(propertyName);
+            }
+            final Object value = foreignKeyGetter.invoke(instance);
+            return value != null ? ((EntityState) value.getClass().getDeclaredField("_rlState").get(value)).load(value) : Mono.empty();
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class LazyForeignKeyFieldGetterMethodDelegate {
+        private final String propertyName;
+
+        @RuntimeType
+        public Mono<?> intercept(@This Object instance, @FieldValue("_rlState") EntityState _rlState) {
+            return _rlState.load(instance)
+                    .map(_rlState.getFieldMapper(instance, propertyName));
         }
     }
 
