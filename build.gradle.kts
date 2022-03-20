@@ -35,3 +35,7 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+java.toolchain {
+    languageVersion.set(JavaLanguageVersion.of(8))
+}

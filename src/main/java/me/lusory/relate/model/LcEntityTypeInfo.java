@@ -24,7 +24,7 @@ public class LcEntityTypeInfo {
     private LcEntityTypeInfo(Class<?> clazz) throws ModelException {
         type = clazz;
         try {
-            stateField = clazz.getDeclaredField("_lcState");
+            stateField = clazz.getDeclaredField("_rlState");
             stateField.setAccessible(true);
         } catch (Exception e) {
             throw new ModelException(

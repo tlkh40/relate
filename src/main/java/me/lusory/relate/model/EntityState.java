@@ -35,8 +35,7 @@ public class EntityState {
     private boolean loaded = false;
     private Mono<?> loading = null;
 
-    public EntityState(
-            LcReactiveDataRelationalClient client, RelationalPersistentEntity<?> entityType) {
+    public EntityState(LcReactiveDataRelationalClient client, RelationalPersistentEntity<?> entityType) {
         this.client = client;
         this.entityType = entityType;
     }
@@ -48,7 +47,8 @@ public class EntityState {
     public static EntityState get(
             Object entity,
             LcReactiveDataRelationalClient client,
-            @Nullable RelationalPersistentEntity<?> entityType) {
+            @Nullable RelationalPersistentEntity<?> entityType
+    ) {
         try {
             Field fieldInfo = LcEntityTypeInfo.get(entity.getClass()).getStateField();
             EntityState state = (EntityState) fieldInfo.get(entity);
@@ -160,7 +160,7 @@ public class EntityState {
         modifiedFields.clear();
         persistedValues.clear();
         for (Field f : entity.getClass().getDeclaredFields()) {
-            if ("_lcState".equals(f.getName())
+            if ("_rlState".equals(f.getName())
                     || f.isAnnotationPresent(Transient.class)
                     || f.isAnnotationPresent(Autowired.class)
                     || f.isAnnotationPresent(Value.class)) {

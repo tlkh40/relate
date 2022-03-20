@@ -18,7 +18,6 @@ import net.bytebuddy.description.annotation.AnnotationList;
 import net.bytebuddy.description.field.FieldDescription;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.*;
@@ -56,7 +55,7 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
     private final Map<String, Map<String, JoinTableInfo>> joinTableFields = new HashMap<>();
 
     public EntityClassRewriter() {
-        // dummy constructor for testing
+        // dummy testing constructor
     }
 
     private EntityClassRewriter(SpringApplication application, String[] args) {
@@ -75,8 +74,7 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
                     .collect(Collectors.toMap(ClassInfo::getName, Function.identity()));
         }
 
-        final ClassFileLocator contextClassFileLocator = ClassFileLocator.ForClassLoader.of(Thread.currentThread().getContextClassLoader());
-        final TypePool contextTypePool = TypePool.Default.of(contextClassFileLocator);
+        final TypePool contextTypePool = TypePool.Default.of(Thread.currentThread().getContextClassLoader());
 
         // process join table fields and create join classes
         final LinkedList<Tuple4<ClassInfo, FieldInfo, AnnotationInfo, ClassInfo>> joins = new LinkedList<>(); // variable type needs to be LinkedList
@@ -260,30 +258,29 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
             joinClasses.put(joinClassName, classBuilder);
         }
 
-        final Set<DynamicType.Unloaded<?>> builtClasses = new HashSet<>();
+        final Set<DynamicType.Builder<?>> classBuilders = new HashSet<>();
         // process the entity classes
         for (final ClassInfo classInfo : entityClasses.values()) {
-            builtClasses.add(processEntityClassBuilder(byteBuddy.redefine(contextTypePool.describe(classInfo.getName()).resolve(), contextClassFileLocator)));
+            classBuilders.add(processEntityClassBuilder(byteBuddy.subclass(contextTypePool.describe(classInfo.getName()).resolve())));
         }
         // process the join table class builders
         for (final DynamicType.Builder<Object> builder : joinClasses.values()) {
-            builtClasses.add(processEntityClassBuilder(builder));
+            classBuilders.add(processEntityClassBuilder(builder));
         }
         // process join table accessors
         for (final Map.Entry<String, Map<String, JoinTableInfo>> classEntry : joinTableFields.entrySet()) {
             for (final Map.Entry<String, JoinTableInfo> propertyEntry : classEntry.getValue().entrySet()) {
-                builtClasses.add(
-                        byteBuddy.redefine(contextTypePool.describe(classEntry.getKey()).resolve(), contextClassFileLocator)
+                classBuilders.add(
+                        byteBuddy.subclass(contextTypePool.describe(classEntry.getKey()).resolve())
                                 .method(ElementMatchers.isGetter(propertyEntry.getKey()))
                                 .intercept(MethodDelegation.to(new JoinGetterMethodDelegate(propertyEntry)))
                                 .method(ElementMatchers.isSetter(propertyEntry.getKey()))
                                 .intercept(MethodDelegation.to(new JoinSetterMethodDelegate(propertyEntry)))
-                                .make()
                 );
             }
         }
 
-        LcEntityTypeInfo.setClasses(builtClasses);
+        LcEntityTypeInfo.setClasses(classBuilders.stream().map(e -> e.make().load(Thread.currentThread().getContextClassLoader()).getLoaded()).collect(Collectors.toList()));
     }
 
     private List<AnnotationDescription> getJoinFieldAnnotations(String columnName) {
@@ -334,7 +331,7 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
                 || annotations.isAnnotationPresent(ForeignKey.class);
     }
 
-    private <T> DynamicType.Unloaded<T> processEntityClassBuilder(DynamicType.Builder<T> builder) {
+    private <T> DynamicType.Builder<T> processEntityClassBuilder(DynamicType.Builder<T> builder) {
         // add state attribute
         builder = builder.defineField("_rlState", EntityState.class, Modifier.PUBLIC)
                 .annotateField(AnnotationDescription.Builder.ofType(Transient.class).build());
@@ -345,8 +342,7 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
             }
 
             // persistent fields accessor
-            builder = builder.method(ElementMatchers.isSetter(fieldDescription.getName())) // TODO: perhaps expand this to account for type
-                    .intercept(SETTER_METHOD_ADVICE);
+            builder = builder.visit(SETTER_METHOD_ADVICE.on(ElementMatchers.isSetter(fieldDescription.getName()))); // TODO: perhaps expand this to account for type
         }
 
         final TypeDescription builderType = builder.toTypeDescription();
@@ -393,17 +389,16 @@ public class EntityClassRewriter implements SpringApplicationRunListener {
         return builder.method(ElementMatchers.named("entityLoaded").and(ElementMatchers.takesNoArguments()).and(ElementMatchers.returns(boolean.class)))
                 .intercept(ENTITY_LOADED_METHOD_DELEGATION)
                 .defineMethod("loadEntity", Mono.class, Modifier.PUBLIC)
-                .intercept(LOAD_ENTITY_METHOD_DELEGATION)
-                .make();
+                .intercept(LOAD_ENTITY_METHOD_DELEGATION);
     }
 
     // advices and method delegates
 
-    static class SetterMethodAdvice {
+    public static class SetterMethodAdvice {
         @Advice.OnMethodEnter
-        static void intercept(
-                @Advice.FieldValue(value = "_rlState", readOnly = false) EntityState _rlState,
-                @Advice.Origin(value = "#p") String backingField,
+        public static void intercept(
+                @Advice.FieldValue("_rlState") EntityState _rlState,
+                @Advice.Origin("#p") String backingField,
                 @Advice.Argument(0) Object newValue
         ) {
             _rlState.fieldSet(backingField, newValue);

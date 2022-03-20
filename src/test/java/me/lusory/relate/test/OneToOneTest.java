@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 
 @SpringBootTest(properties = {
-        "spring.r2dbc.url=r2dbc:h2:mem:./test.db",
+        "spring.r2dbc.url=r2dbc:h2:mem:///testdb",
         "spring.r2dbc.username=sa",
         "spring.r2dbc.password="
 })

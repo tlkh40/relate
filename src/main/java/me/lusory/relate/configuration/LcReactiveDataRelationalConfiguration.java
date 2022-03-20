@@ -1,11 +1,13 @@
 package me.lusory.relate.configuration;
 
 import io.r2dbc.spi.ConnectionFactory;
+import lombok.RequiredArgsConstructor;
 import me.lusory.relate.mapping.LcMappingR2dbcConverter;
 import me.lusory.relate.schema.dialect.RelationalDatabaseSchemaDialect;
 import me.lusory.relate.LcReactiveDataRelationalClient;
 import me.lusory.relate.mapping.LcReactiveDataAccessStrategy;
 import me.lusory.relate.repository.LcR2dbcEntityTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -30,19 +32,20 @@ import org.springframework.util.Assert;
  */
 @Configuration
 @ComponentScan("me.lusory.relate")
+@RequiredArgsConstructor(onConstructor_ = {@Autowired})
 public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2dbcConfiguration {
     private static final String CONNECTION_FACTORY_BEAN_NAME = "connectionFactory";
+    private final RelationalDatabaseSchemaDialect schemaDialect;
 
     @Nullable
     protected ApplicationContext context;
+
 
     @Override
     public void setApplicationContext(@NonNull ApplicationContext applicationContext) {
         this.context = applicationContext;
         super.setApplicationContext(applicationContext);
     }
-
-    public abstract RelationalDatabaseSchemaDialect schemaDialect();
 
     @SuppressWarnings("unchecked")
     public LcReactiveDataRelationalClient getLcClient(DatabaseClient databaseClient, ReactiveDataAccessStrategy dataAccessStrategy) {
@@ -52,21 +55,20 @@ public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2db
                         RelationalPersistentEntity<?>,
                         ? extends RelationalPersistentProperty>)
                         dataAccessStrategy.getConverter().getMappingContext(),
-                schemaDialect(),
+                schemaDialect,
                 (LcReactiveDataAccessStrategy) dataAccessStrategy,
-                (LcMappingR2dbcConverter) dataAccessStrategy.getConverter());
+                (LcMappingR2dbcConverter) dataAccessStrategy.getConverter()
+        );
     }
 
     @Bean
     @Override
-    public @NonNull
-    LcReactiveDataAccessStrategy reactiveDataAccessStrategy(@NonNull R2dbcConverter converter) {
+    public @NonNull LcReactiveDataAccessStrategy reactiveDataAccessStrategy(@NonNull R2dbcConverter converter) {
         return new LcReactiveDataAccessStrategy(getDialect(getConnectionFactory()), (LcMappingR2dbcConverter) converter);
     }
 
     @Override
-    public @NonNull
-    MappingR2dbcConverter r2dbcConverter(
+    public @NonNull MappingR2dbcConverter r2dbcConverter(
             @NonNull R2dbcMappingContext mappingContext,
             @NonNull R2dbcCustomConversions r2dbcCustomConversions
     ) {
@@ -75,8 +77,7 @@ public abstract class LcReactiveDataRelationalConfiguration extends AbstractR2db
 
     @Bean
     @Override
-    public @NonNull
-    R2dbcEntityTemplate r2dbcEntityTemplate(
+    public @NonNull R2dbcEntityTemplate r2dbcEntityTemplate(
             @NonNull DatabaseClient databaseClient,
             @NonNull ReactiveDataAccessStrategy dataAccessStrategy
     ) {

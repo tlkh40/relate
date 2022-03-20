@@ -131,14 +131,12 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull
-    Mono<Void> deleteAll(@NonNull Publisher<? extends T> objectPublisher) {
+    public @NonNull Mono<Void> deleteAll(@NonNull Publisher<? extends T> objectPublisher) {
         return lcClient.delete(objectPublisher);
     }
 
     @Override
-    public @NonNull
-    Mono<Void> deleteAll() {
+    public @NonNull Mono<Void> deleteAll() {
         if (ModelUtils.hasCascadeDeleteImpacts(
                 entityInfo.getJavaType(), lcClient.getMappingContext())) {
             return deleteAll(findAll());
@@ -147,8 +145,7 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull
-    Mono<Void> deleteAllById(@NonNull Iterable<? extends ID> ids) {
+    public @NonNull Mono<Void> deleteAllById(@NonNull Iterable<? extends ID> ids) {
         RelationalPersistentEntity<?> entity =
                 lcClient.getMappingContext().getRequiredPersistentEntity(entityInfo.getJavaType());
         RelationalPersistentProperty idProperty = entity.getRequiredIdProperty();
@@ -171,8 +168,7 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull
-    Mono<Void> deleteById(@NonNull ID id) {
+    public @NonNull Mono<Void> deleteById(@NonNull ID id) {
         Assert.notNull(id, "Id must not be null in deleteById");
         if (ModelUtils.hasCascadeDeleteImpacts(
                 entityInfo.getJavaType(), lcClient.getMappingContext())) {
@@ -198,8 +194,7 @@ public class LcR2dbcRepositoryImpl<T, ID> extends SimpleR2dbcRepository<T, ID>
     }
 
     @Override
-    public @NonNull
-    Mono<Void> deleteById(@NonNull Publisher<ID> idPublisher) {
+    public @NonNull Mono<Void> deleteById(@NonNull Publisher<ID> idPublisher) {
         if (ModelUtils.hasCascadeDeleteImpacts(
                 entityInfo.getJavaType(), lcClient.getMappingContext())) {
             return deleteAll(findAllById(idPublisher));
