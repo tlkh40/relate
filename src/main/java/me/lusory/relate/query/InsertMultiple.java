@@ -52,32 +52,24 @@ public class InsertMultiple {
         sql.append("INSERT INTO ");
         sql.append(render(renderContext.getNamingStrategy().getName(into), renderContext));
         sql.append(" (");
-        boolean first = true;
-        for (Column col : columns) {
-            if (first) {
-                first = false;
-            } else {
+        for (int i = 0; i < columns.size(); i++) {
+            if (i > 0) {
                 sql.append(',');
             }
-            sql.append(render(renderContext.getNamingStrategy().getName(col), renderContext));
+            sql.append(render(renderContext.getNamingStrategy().getName(columns.get(i)), renderContext));
         }
         sql.append(") VALUES ");
-        first = true;
-        for (InsertRowValues row : values) {
-            if (first) {
-                first = false;
-            } else {
+        for (int row = 0; row < values.size(); row++) {
+            if (row > 0) {
                 sql.append(',');
             }
             sql.append('(');
-            boolean firstValue = true;
-            for (Expression value : row.expressions) {
-                if (firstValue) {
-                    firstValue = false;
-                } else {
+            InsertRowValues rowValues = values.get(row);
+            for (int i = 0; i < rowValues.expressions.size(); i++) {
+                if (i > 0) {
                     sql.append(',');
                 }
-                sql.append(render(value, renderContext));
+                sql.append(render(rowValues.expressions.get(i), renderContext));
             }
             sql.append(')');
         }
@@ -86,7 +78,6 @@ public class InsertMultiple {
 
     @Override
     public String toString() {
-
         StringBuilder builder = new StringBuilder();
 
         builder.append("INSERT INTO ").append(this.into);

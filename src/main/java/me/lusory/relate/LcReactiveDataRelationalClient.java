@@ -377,8 +377,8 @@ public class LcReactiveDataRelationalClient {
      *
      * @param publisher    entities to delete
      * @param bunchSize    bufferize entities to delete them by bunch
-     * @param bunchTimeout timeout after which a the current bunch of entities are deleted even the
-     *                     bunch is not full
+     * @param bunchTimeout timeout after which the current bunch of entities are deleted even
+     *                     if the bunch is not full
      */
     public <T> Mono<Void> delete(Publisher<T> publisher, int bunchSize, Duration bunchTimeout) {
         return Flux.from(publisher)

@@ -97,21 +97,13 @@ public class MySQLSchemaDialect extends RelationalDatabaseSchemaDialect {
     @Override
     protected void addIndexDefinitionInTable(Table table, Index index, StringBuilder sql) {
         if (index.isUnique()) {
-            sql.append("CONSTRAINT UNIQUE INDEX ");
-        } else {
-            sql.append("INDEX ");
+            sql.append("CONSTRAINT UNIQUE ");
         }
+        sql.append("INDEX ");
+
         sql.append(index.getName());
         sql.append('(');
-        boolean first = true;
-        for (String col : index.getColumns()) {
-            if (first) {
-                first = false;
-            } else {
-                sql.append(',');
-            }
-            sql.append(col);
-        }
+        sql.append(String.join(",", index.getColumns()));
         sql.append(')');
     }
 
@@ -157,14 +149,11 @@ public class MySQLSchemaDialect extends RelationalDatabaseSchemaDialect {
             return super.countDistinct(expressions);
         }
         List<Expression> concat = new ArrayList<>(expressions.size() * 2);
-        boolean first = true;
-        for (Expression e : expressions) {
-            if (first) {
-                first = false;
-            } else {
+        for (int i = 0; i < expressions.size(); i++) {
+            if (i > 0) {
                 concat.add(SQL.literalOf("_"));
             }
-            concat.add(e);
+            concat.add(expressions.get(i));
         }
         return Functions.count(
                 SimpleFunction.create(

@@ -422,14 +422,12 @@ public abstract class RelationalDatabaseSchemaDialect {
         StringBuilder sql = new StringBuilder();
         sql.append("CREATE TABLE ").append(table.getName());
         sql.append(" (");
-        boolean first = true;
-        for (Column col : table.getColumns()) {
-            if (first) {
-                first = false;
-            } else {
+        List<Column> columns = table.getColumns();
+        for (int i = 0; i < columns.size(); i++) {
+            if (i > 0) {
                 sql.append(", ");
             }
-            addColumnDefinition(col, sql);
+            addColumnDefinition(columns.get(i), sql);
         }
         for (Index index : table.getIndexes()) {
             if (!canCreateIndexInTableDefinition(index)) {
@@ -453,15 +451,7 @@ public abstract class RelationalDatabaseSchemaDialect {
         sql.append(" ON ");
         sql.append(table.getName());
         sql.append('(');
-        boolean first = true;
-        for (String col : index.getColumns()) {
-            if (first) {
-                first = false;
-            } else {
-                sql.append(',');
-            }
-            sql.append(col);
-        }
+        sql.append(String.join(",", index.getColumns()));
         sql.append(')');
         return sql.toString();
     }
